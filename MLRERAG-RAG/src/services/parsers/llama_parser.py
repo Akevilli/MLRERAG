@@ -3,6 +3,7 @@ nest_asyncio.apply()
 
 from .base_parser import Parser
 from llama_cloud_services import LlamaParse
+from llama_index.core.schema import Document
 
 
 
@@ -20,8 +21,8 @@ class LlamaParser(Parser):
             language=language,
         )
 
-    def parse(self, paper: list[str]):
+    def parse(self, paper: list[str]) -> list[Document]:
         results = self.parser.parse(paper)
-        results = [result.get_markdown_documents()[0].text.replace("\n", "") for result in results]
+        documents = [result.get_markdown_documents()[0] for result in results]
 
-        return results
+        return documents
