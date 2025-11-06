@@ -1,5 +1,10 @@
-from langchain_huggingface import HuggingFaceEmbeddings
+from typing import Generator, Any
 
+from langchain_huggingface import HuggingFaceEmbeddings
+from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
+
+from .database import SessionLocal
 from .services.downloaders import ArxivDownloader
 from .services.parsers import LlamaParser
 from .services.chunkers import SemanticBaseChunker
@@ -15,6 +20,22 @@ _embedder = HuggingFaceEmbeddings(
 )
 
 
+# DB
+_session = SessionLocal()
+
+def get_session() -> Generator[Session, Any, None]:
+    try:
+        yield _session
+        _session.commit()
+
+    except SQLAlchemyError:
+        _session.rollback()
+        raise
+
+    finally:
+        _session.close()
+
+
 # Downloaders
 _arxiv_downloader = ArxivDownloader()
 
@@ -25,7 +46,6 @@ def get_arxiv_downloader():
 # Parsers
 _llama_parser = LlamaParser(settings.LLAMA_PARSER_API_KEY)
 
-
 def get_llama_parser():
     return _llama_parser
 
@@ -35,6 +55,7 @@ _semantic_chunker = SemanticBaseChunker(_embedder)
 
 def get_semantic_chunker():
     return _semantic_chunker
+
 
 # Embedders
 _hugging_face_embedder = HuggingFaceEmbedder(_embedder)

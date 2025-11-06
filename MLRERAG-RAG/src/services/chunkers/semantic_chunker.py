@@ -1,8 +1,9 @@
 from langchain_huggingface import HuggingFaceEmbeddings
-from llama_index.core import Document
 from langchain_experimental.text_splitter import SemanticChunker
 
 from .base_chunker import Chunker
+from .schema import Chunk
+from src.services.parsers import Document
 
 
 
@@ -17,14 +18,19 @@ class SemanticBaseChunker(Chunker):
             min_chunk_size=150
         )
 
-    def chunk(self, documents: list[Document]) -> list[dict]:
-        documents_chunks = []
+    def chunk(self, documents: list[Document]) -> list[Chunk]:
+        chunks: list[Chunk] = []
 
         for document in documents:
-            chunks = self.chunker.split_text(document.text)
-            documents_chunks.append({
-                "name": document.extra_info["file_name"].replace("./papers/", "").replace(".pdf", ""),
-                "chunks": chunks,
-            })
+            chunks_text = self.chunker.split_text(document.text)
 
-        return documents_chunks
+            for index, chunk_text in enumerate(chunks_text):
+                chunk = Chunk(
+                    document_id=document.id,
+                    text=chunk_text,
+                    chunk_index=index,
+                )
+                
+                chunks.append(chunk)
+
+        return chunks
