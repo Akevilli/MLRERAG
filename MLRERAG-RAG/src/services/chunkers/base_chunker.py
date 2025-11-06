@@ -1,9 +1,10 @@
 from abc import ABC, abstractmethod
 
-from llama_index.core import Document
+from src.services.parsers import Document
+from .schema import Chunk
 
 
 class Chunker(ABC):
     @abstractmethod
-    def chunk(self, documents):
+    def chunk(self, documents: list[Document]) -> list[Chunk]:
         pass

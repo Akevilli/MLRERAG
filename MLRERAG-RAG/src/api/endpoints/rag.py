@@ -24,8 +24,8 @@ def upload(
     semantic_chunker: Chunker = Depends(get_semantic_chunker),
     embedder: Embedder = Depends(get_huggingface_embedder),
 ):
-    paths = arxiv_downloader.download(upload_data.id_list)
-    documents = llama_parser.parse(paths)
+    documents_info = arxiv_downloader.download(upload_data)
+    documents = llama_parser.parse(documents_info)
     chunks = semantic_chunker.chunk(documents)
     embeddings = embedder.embed_documents(chunks)
 
