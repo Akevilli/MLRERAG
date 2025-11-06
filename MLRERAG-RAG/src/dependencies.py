@@ -1,7 +1,19 @@
+from langchain_huggingface import HuggingFaceEmbeddings
+
 from .services.downloaders import ArxivDownloader
 from .services.parsers import LlamaParser
 from .services.chunkers import SemanticBaseChunker
+from .services.embedders import HuggingFaceEmbedder
 from .core import settings
+
+
+# Models
+_embedder = HuggingFaceEmbeddings(
+    model_name=settings.EMBEDDER_NAME,
+    model_kwargs={'device': settings.DEVICE},
+    encode_kwargs={'normalize_embeddings': True}
+)
+
 
 # Downloaders
 _arxiv_downloader = ArxivDownloader()
@@ -19,8 +31,13 @@ def get_llama_parser():
 
 
 # Chunkers
-
-_semantic_chunker = SemanticBaseChunker(settings.EMBEDDER_NAME, settings.DEVICE)
+_semantic_chunker = SemanticBaseChunker(_embedder)
 
 def get_semantic_chunker():
     return _semantic_chunker
+
+# Embedders
+_hugging_face_embedder = HuggingFaceEmbedder(_embedder)
+
+def get_huggingface_embedder():
+    return _hugging_face_embedder
