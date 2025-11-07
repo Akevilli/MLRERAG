@@ -1,9 +1,9 @@
 from typing import Generator, Any
+from logging import Logger
 
 from langchain_huggingface import HuggingFaceEmbeddings
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
-
 
 from .database import SessionLocal
 from .repositories import DocumentRepository
@@ -12,8 +12,12 @@ from .services.downloaders import ArxivDownloader
 from .services.parsers import LlamaParser
 from .services.chunkers import SemanticBaseChunker
 from .services.embedders import HuggingFaceEmbedder
-from .core import settings
+from .core import settings, _logger
 
+
+# Logger
+def get_logger() -> Logger:
+    return _logger
 
 # Models
 _embedder = HuggingFaceEmbeddings(
