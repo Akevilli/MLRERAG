@@ -16,4 +16,4 @@ class Document(Base):
     source_url: Mapped[str] = mapped_column(nullable=False)
     published_at: Mapped[datetime] = mapped_column(nullable=False)
 
-    chunks: Mapped[List["Chunk"]] = relationship(back_populates="document")
+    chunks: Mapped[List["Chunk"]] = relationship(back_populates="document", default_factory=list)
