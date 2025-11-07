@@ -4,7 +4,10 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 
+
 from .database import SessionLocal
+from .repositories import DocumentRepository
+from .services.documents import DocumentService
 from .services.downloaders import ArxivDownloader
 from .services.parsers import LlamaParser
 from .services.chunkers import SemanticBaseChunker
@@ -34,6 +37,20 @@ def get_session() -> Generator[Session, Any, None]:
 
     finally:
         _session.close()
+
+
+# Repositories
+_document_repository = DocumentRepository()
+
+def get_document_repository() -> DocumentRepository:
+    return _document_repository
+
+
+# Services
+_document_service = DocumentService(_document_repository)
+
+def get_document_service() -> DocumentService:
+    return _document_service
 
 
 # Downloaders
