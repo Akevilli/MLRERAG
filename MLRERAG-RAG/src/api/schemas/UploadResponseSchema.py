@@ -1,5 +1,5 @@
 from pydantic import BaseModel
 
 
-class UploadResponse(BaseModel):
+class UploadResponseSchema(BaseModel):
     saved_documents: list[str]
