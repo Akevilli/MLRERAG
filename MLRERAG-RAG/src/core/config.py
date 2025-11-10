@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     EMBEDDER_NAME: str
     DEVICE: str
 
+    # API_KEYS
+    OPENAI_API_KEY: str
+
     @property
     def SQLALCHEMY_DATABASE_URI(self):
         return (f"postgresql+psycopg2://{self.DATABASE_USER}:{self.DATABASE_PASSWORD}@"
