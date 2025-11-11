@@ -1,13 +1,13 @@
 import jwt
 from fastapi.security import OAuth2PasswordBearer
-from fastapi import status, HTTPException
+from fastapi import Depends, HTTPException, status
 
 from .config import settings
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-def decode_jwt(token: str) -> dict:
+def get_user_payload(token: str = Depends(oauth2_scheme)) -> dict:
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=settings.ALGORITHM)
         return payload
