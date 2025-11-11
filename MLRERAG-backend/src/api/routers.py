@@ -1,13 +1,14 @@
 from fastapi import APIRouter
 
-from .endpoints import users, auth
+from .endpoints import users, auth, rag
 
 
 main_router = APIRouter(prefix="/api")
 
 routers = [
     (users.router, "/users", ["users"]),
-    (auth.router, "/auth", ["auth"])
+    (auth.router, "/auth", ["auth"]),
+    (rag.router, "/rag", ["rag"]),
 ]
 
 for router, prefix, tags in routers:

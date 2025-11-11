@@ -18,10 +18,17 @@ class Settings(BaseSettings):
     DATABASE_PASSWORD: str
     DATABASE_NAME: str
 
+    # Models
+    EMBEDDER_NAME: str
+    DEVICE: str
+
+    # API_KEYS
+    OPENAI_API_KEY: str
+
     @property
     def SQLALCHEMY_DATABASE_URI(self):
-        return (f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@"
-                f"{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DATABASE}")
+        return (f"postgresql+psycopg2://{self.DATABASE_USER}:{self.DATABASE_PASSWORD}@"
+                f"{self.DATABASE_HOST}:{self.DATABASE_PORT}/{self.DATABASE_NAME}")
 
 
 settings = Settings()
