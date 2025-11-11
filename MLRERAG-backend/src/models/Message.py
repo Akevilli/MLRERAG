@@ -12,7 +12,7 @@ class Message(Base):
     __tablename__ = "messages"
 
     content: Mapped[str] = mapped_column(nullable=False)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.now)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.now, init=False)
     is_users: Mapped[bool] = mapped_column(nullable=False, default=True)
 
     chat_id: Mapped[UUID] = mapped_column(
