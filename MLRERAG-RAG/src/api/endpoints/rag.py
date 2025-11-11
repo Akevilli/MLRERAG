@@ -1,21 +1,36 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
+from sqlalchemy.orm import Session
 
-from src.services.downloaders import ArxivDownloader
-from src.services.parsers import LlamaParser
-from src.dependencies import get_arxiv_downloader, get_llama_parser
-from ..schemas import UploadSchema
-
+from src.dependencies import get_session, get_rag_service
+from ..schemas import UploadSchema, UploadResponseSchema, QuerySchema, QueryResponseSchema
+from src.services.rag import RAGService
 
 router = APIRouter()
 
 
-@router.put("/upload")
+@router.put(
+    "/upload",
+    status_code=status.HTTP_201_CREATED,
+    response_model=UploadResponseSchema
+)
 def upload(
     upload_data: UploadSchema,
-    arxiv_downloader: ArxivDownloader = Depends(get_arxiv_downloader),
-    llama_parser: LlamaParser = Depends(get_llama_parser)
+    _rag_service: RAGService = Depends(get_rag_service),
+    _session: Session = Depends(get_session)
 ):
-    paths = arxiv_downloader.download(upload_data.id_list)
-    results = llama_parser.parse(paths)
+    uploaded_documents = _rag_service.upload(upload_data, session=_session)
 
-    return results
+    return uploaded_documents
+
+
+@router.post(
+    "/generate_answer",
+    status_code=status.HTTP_200_OK,
+    response_model=QueryResponseSchema
+)
+def generate_answer(
+    query: QuerySchema,
+    _rag_service: RAGService = Depends(get_rag_service),
+):
+    response = _rag_service.generate_answer(query)
+    return response
