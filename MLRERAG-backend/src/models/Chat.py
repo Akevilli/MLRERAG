@@ -18,7 +18,7 @@ class Chat(Base):
     )
 
     created_at: Mapped[datetime] = mapped_column(nullable=False, default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.now, onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=func.now(), onupdate=func.now())
 
     owner: Mapped["User"] = relationship(back_populates="chats", init=False)
     messages: Mapped[list["Message"]] = relationship(back_populates="chat", init=False)
