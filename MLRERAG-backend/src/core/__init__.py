@@ -1,3 +1,3 @@
 from .config import settings
-from .jwt import decode_jwt, oauth2_scheme
+from .jwt import get_user_payload
 from .exception_handler import ErrorHandler

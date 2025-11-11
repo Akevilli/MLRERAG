@@ -5,3 +5,5 @@ from .users import (
     LoginUserSchema,
     LoginedUserView
 )
+
+from .rag import RAGQuerySchema

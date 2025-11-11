@@ -28,9 +28,18 @@ class Settings(BaseSettings):
     SMTP_HOST: str
     SMTP_PORT: int
 
+    RAG_SERVICE_HOST: str
+    RAG_SERVICE_PORT: int
+
+    CONTEXT_WINDOW: int
+
     @property
     def SQLALCHEMY_DATABASE_URI(self):
         return (f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@"
                 f"{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DATABASE}")
+
+    @property
+    def RAG_SERVICE_URL(self):
+        return f"http://{self.RAG_SERVICE_HOST}:{self.RAG_SERVICE_PORT}"
 
 settings = Settings()
