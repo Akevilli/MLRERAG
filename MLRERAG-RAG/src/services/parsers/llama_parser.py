@@ -1,9 +1,11 @@
 import nest_asyncio
 nest_asyncio.apply()
 
-from .base_parser import Parser
 from llama_cloud_services import LlamaParse
 
+from .base_parser import Parser
+from .schemas import Document
+from src.services.downloaders import DocumentInfo
 
 
 class LlamaParser(Parser):
@@ -20,8 +22,18 @@ class LlamaParser(Parser):
             language=language,
         )
 
-    def parse(self, paper: list[str]):
-        results = self.parser.parse(paper)
-        results = [result.get_markdown_documents()[0].text.replace("\n", "") for result in results]
+    def parse(self, documents_info: list[DocumentInfo]) -> list[Document]:
+        paths = [f"./papers/{document.id}.pdf" for document in documents_info]
+        results = self.parser.parse(paths)
 
-        return results
+        documents = []
+
+        for index, result in enumerate(results):
+            document = Document(
+                **documents_info[index].model_dump(),
+                text=result.get_markdown_documents()[0].text
+            )
+
+            documents.append(document)
+
+        return documents
