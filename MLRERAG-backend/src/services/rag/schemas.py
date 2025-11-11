@@ -1,7 +1,7 @@
 from uuid import UUID
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class MessageSchema(BaseModel):
@@ -10,6 +10,8 @@ class MessageSchema(BaseModel):
 
 
 class ChatSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     title: str
     owner_id: UUID
@@ -17,8 +19,10 @@ class ChatSchema(BaseModel):
     updated_at: datetime
 
 
-
 class RAGResponseSchema(BaseModel):
     answer: str
     documents: str
+
+
+class RAGRServiceResponseSchema(RAGResponseSchema):
     chat: ChatSchema
