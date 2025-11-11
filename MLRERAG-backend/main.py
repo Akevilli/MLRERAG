@@ -5,7 +5,15 @@ from src.core import ErrorHandler
 from src.dependencies import get_logger
 
 
-app = FastAPI()
+app = FastAPI(
+    openapi_extra={
+        "security": [
+            {
+                "HTTPBearer": [] # <--- Changed from OAuth2PasswordBearer
+            }
+        ]
+    }
+)
 
 app.include_router(main_router)
 
