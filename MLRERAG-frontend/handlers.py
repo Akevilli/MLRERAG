@@ -3,8 +3,25 @@ import streamlit as st
 
 
 def response_request(prompt: str):
-    response = requests.get(f"http://localhost:8000/{prompt}")
-    return response.json()["Hello"]
+    response = requests.put(
+        f"http://localhost:8000/api/rag",
+        json={
+            "prompt": prompt,
+            "chat_id": None
+        },
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {st.session_state['access_token']}"
+        }
+    )
+
+    response_data = response.json()
+
+    if response.status_code != 201:
+        st.error(response_data["error"]["message"])
+
+    return response_data
+
 
 
 def login_handler():
