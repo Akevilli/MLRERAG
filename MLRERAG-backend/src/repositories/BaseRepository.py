@@ -13,7 +13,7 @@ class BaseRepository[T: Base]:
         self.__model: Type[Base] = model
 
     def get_by_id(self, id: UUID, session: Session) -> Optional[T]:
-        query = select(T).where(self.__model.id == id)
+        query = select(self.__model).where(self.__model.id == id)
         result = session.execute(query)
         return result.scalar_one_or_none()
 
