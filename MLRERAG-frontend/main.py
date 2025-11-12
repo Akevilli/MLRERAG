@@ -1,6 +1,8 @@
 import streamlit as st
 
-from handlers import *
+from handlers import response_request
+
+st.session_state["chat_disabled"] = False
 
 st.title("MLRERAG")
 
@@ -33,6 +35,6 @@ if prompt := st.chat_input("Спросите что-нибудь..."):
     assistant_response = response_request(prompt)
 
     with st.chat_message("assistant"):
-        st.markdown(assistant_response)
+        st.markdown(assistant_response["answer"])
 
-    st.session_state.messages.append({"role": "assistant", "content": assistant_response})
+    st.session_state.messages.append({"role": "assistant", "content": assistant_response["answer"]})
