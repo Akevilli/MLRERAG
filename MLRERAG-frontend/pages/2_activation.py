@@ -2,6 +2,8 @@ import streamlit as st
 from handlers import activation_handler
 
 
+st.set_page_config(page_title="Email Verification")
+
 st.header("Activation")
 
 with st.form("activation_form"):
@@ -13,6 +15,7 @@ with st.form("activation_form"):
         use_container_width=True,
         on_click=activation_handler
     )
+
 
 
 if "activation_success" in st.session_state and st.session_state["activation_success"]:
