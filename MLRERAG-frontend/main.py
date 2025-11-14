@@ -29,13 +29,13 @@ if "chats" not in st.session_state:
         "page": 0,
         "chats": []
     }
-    # get_user_chats(0)
+    get_user_chats(0)
 
 if "current_chut" not in st.session_state:
     st.session_state["current_chat"] = Chat(id=None, name=None)
 
 if "messages" not in st.session_state:
-    st.session_state["messages"] = [Message(role="assistant", content="a"), Message(role="user", content="b")]
+    st.session_state["messages"] = [Message(is_users=True, content="a"), Message(is_users=False, content="b")]
 
 st.set_page_config(page_title="MLRERAG")
 st.title("MLRERAG")
@@ -69,8 +69,9 @@ with st.sidebar:
 
 for message in st.session_state["messages"]:
     if message:
-        with st.chat_message(message.role):
+        with st.chat_message("user" if message.is_users else "assistant"):
             st.markdown(message.content)
+
 
 if prompt := st.chat_input("Спросите что-нибудь..."):
     st.session_state.messages.append({"role": "user", "content": prompt})

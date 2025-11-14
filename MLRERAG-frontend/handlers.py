@@ -89,7 +89,7 @@ def reset_current_chat():
 
 
 def change_chat_handler(chat_id: str):
-    response = requests.post()
+    load_messages(chat_id)
 
 
 def get_user_chats(page: int):
@@ -115,16 +115,13 @@ def get_user_chats(page: int):
     st.session_state["chats"]["total"] = response_data["total"]
 
 
-def load_messages(chat_id: str, page: int):
+def load_messages(chat_id: str):
     response = requests.get(
         f"{settings.API_URL}/chats/{chat_id}/messages",
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {st.session_state['access_token']}"
         },
-        params={
-            "page": page,
-        }
     )
 
     response_data = response.json()
