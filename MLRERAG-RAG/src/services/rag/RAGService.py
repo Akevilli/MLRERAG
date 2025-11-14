@@ -1,5 +1,4 @@
 from sqlalchemy.orm import Session
-from langgraph.graph.state import CompiledStateGraph
 from langchain_core.messages import HumanMessage, AIMessage
 
 from src.api.schemas import UploadSchema, UploadResponseSchema, QuerySchema, QueryResponseSchema
@@ -9,9 +8,9 @@ from src.services import (
     Chunker,
     Embedder,
     DocumentService,
-    ChunkService,
+    ChunkService
 )
-from src.core.graph import State
+from src.services.graph import Graph, State
 
 
 class RAGService:
@@ -23,7 +22,7 @@ class RAGService:
             embedder: Embedder,
             document_service: DocumentService,
             chunk_service: ChunkService,
-            graph: CompiledStateGraph,
+            graph: Graph,
     ):
         self.__downloader = downloader
         self.__parser = parser
@@ -53,11 +52,11 @@ class RAGService:
 
 
     def generate_answer(self, query: QuerySchema) -> QueryResponseSchema:
-        input_state = State(
-            answer="",
-            messages=[HumanMessage(content=message.content) if message.is_users else AIMessage(message.content) for message in query.messages],
-            documents="",
-        )
+        input_state: State = {
+            "messages": [HumanMessage(message.content) if message.is_users else AIMessage(message.content) for message in query.messages],
+            "answer": "",
+            "documents": ""
+        }
 
         response = self.__graph.invoke(input_state)
         return QueryResponseSchema(

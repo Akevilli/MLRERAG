@@ -1,14 +1,29 @@
+import sys
+import asyncio
 from typing import Generator, Any
 from logging import Logger
 
 from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_openai import ChatOpenAI
+from langchain_postgres import PGVectorStore, PGEngine
+from llama_cloud_services import LlamaParse
+from langchain_experimental.text_splitter import SemanticChunker
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 
 from .database import SessionLocal
 from .repositories import *
 from .services import *
-from .core import settings, _logger, graph
+from .services.graph import Graph
+from .core import settings, _logger
+
+
+if sys.platform == "win32":
+    try:
+        from asyncio import WindowsSelectorEventLoopPolicy
+        asyncio.set_event_loop_policy(WindowsSelectorEventLoopPolicy())
+    except ImportError:
+        print("WindowsSelectorEventLoopPolicy не найден, попробуйте другую версию Python/asyncio.")
 
 
 # Logger
@@ -22,7 +37,23 @@ _embedder = HuggingFaceEmbeddings(
     model_kwargs={'device': settings.DEVICE},
     encode_kwargs={'normalize_embeddings': True}
 )
+_llama_parse = LlamaParse(api_key=settings.LLAMA_PARSER_API_KEY, num_workers=1, verbose=False, language="en")
+_openai_llm = ChatOpenAI(
+    api_key=settings.OPENAI_API_KEY,
+    model=settings.OPENAI_MODEL
+)
 
+
+# PGVectorStore
+_pg_engine = PGEngine.from_connection_string(f"postgresql+psycopg://{settings.DATABASE_USER}:{settings.DATABASE_PASSWORD}@{settings.DATABASE_HOST}:{settings.DATABASE_PORT}/{settings.DATABASE_NAME}")
+_vector_store = PGVectorStore.create_sync(
+    _pg_engine,
+    table_name="chunks",
+    id_column="id",
+    content_column="text",
+    embedding_service=_embedder,
+    embedding_column="embedding"
+)
 
 # DB
 _session = SessionLocal()
@@ -43,30 +74,20 @@ def get_session() -> Generator[Session, Any, None]:
 # Downloaders
 _arxiv_downloader = ArxivDownloader()
 
-def get_arxiv_downloader():
-    return _arxiv_downloader
-
-
 # Parsers
-_llama_parser = LlamaParser(settings.LLAMA_PARSER_API_KEY)
-
-def get_llama_parser():
-    return _llama_parser
-
+_llama_parser = LlamaParser(_llama_parse)
 
 # Chunkers
-_semantic_chunker = SemanticBaseChunker(_embedder)
-
-def get_semantic_chunker():
-    return _semantic_chunker
-
+_semantic_base_chunker = SemanticChunker(
+    _embedder,
+    breakpoint_threshold_amount=87.5,
+    sentence_split_regex=r"\n{2,}|#{1,3}\s|(?<![|\s*-*])---(?![-*\s*|])|(?<![|\s*])\n(?![\s*|])|(?<![.])\.(?![\d.])|[?!]",
+    min_chunk_size=150
+)
+_semantic_chunker = SemanticBaseChunker(_semantic_base_chunker)
 
 # Embedders
 _hugging_face_embedder = HuggingFaceEmbedder(_embedder)
-
-def get_huggingface_embedder():
-    return _hugging_face_embedder
-
 
 # Repositories
 _document_repository = DocumentRepository()
@@ -79,6 +100,12 @@ def get_chunk_repository() -> ChunkRepository:
     return _chunk_repository
 
 
+# Graph
+_graph = Graph(
+    llm=_openai_llm,
+    vector_store=_vector_store,
+)
+
 # Services
 _document_service = DocumentService(_document_repository)
 _chunks_service = ChunkService(_chunk_repository)
@@ -89,7 +116,7 @@ _rag_service = RAGService(
     embedder=_hugging_face_embedder,
     document_service=_document_service,
     chunk_service=_chunks_service,
-    graph=graph
+    graph=_graph
 )
 
 def get_document_service() -> DocumentService:
