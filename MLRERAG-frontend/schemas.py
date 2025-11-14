@@ -19,7 +19,7 @@ class Chat(BaseModel):
 
 class Message(BaseModel):
     content: str
-    role: str
+    is_users: bool
 
 
 settings = Settings()
