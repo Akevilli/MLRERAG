@@ -1,3 +1,3 @@
-from .semantic_chunker import SemanticBaseChunker
-from .base_chunker import Chunker
+from .SemanticChunker import SemanticBaseChunker
+from .BaseChunker import Chunker
 from .schema import Chunk

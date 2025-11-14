@@ -1,2 +1,2 @@
-from .graph import graph
+from .graph import Graph
 from .schemas import State
