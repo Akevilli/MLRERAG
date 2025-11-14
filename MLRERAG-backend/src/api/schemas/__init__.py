@@ -7,3 +7,5 @@ from .users import (
 )
 
 from .rag import RAGQuerySchema
+from .chats import ChatSchema
+from .messages import MessageSchema
