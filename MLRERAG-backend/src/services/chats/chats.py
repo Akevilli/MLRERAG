@@ -17,6 +17,12 @@ class ChatService:
     def get_by_id(self, chat_id: UUID, session: Session) -> Chat:
         return self.__chat_repository.get_by_id(chat_id, session)
 
+
+    def get_chats(self, page: int, user_credentials: dict, session: Session) -> list[Chat]:
+        chats = self.__chat_repository.get_chats(page, user_credentials["user_id"], session)
+        return chats
+
+
     def create(self, chat_schema: CreateChatSchema, session: Session,) -> Chat:
         chat = Chat(**chat_schema.model_dump())
         chat = self.__chat_repository.create(chat, session)
