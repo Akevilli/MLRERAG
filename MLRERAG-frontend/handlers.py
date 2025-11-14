@@ -1,32 +1,12 @@
 import requests
 import streamlit as st
 
-
-def response_request(prompt: str):
-    response = requests.put(
-        f"http://localhost:8000/api/rag",
-        json={
-            "prompt": prompt,
-            "chat_id": None
-        },
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {st.session_state['access_token']}"
-        }
-    )
-
-    response_data = response.json()
-
-    if response.status_code != 201:
-        st.error(response_data["error"]["message"])
-
-    return response_data
-
+from schemas import settings, Chat, Message
 
 
 def login_handler():
     response = requests.post(
-        f"http://localhost:8000/api/auth/login",
+        f"{settings.API_URL}/auth/login",
         json={
             "login": st.session_state["login_form_login"],
             "password": st.session_state["login_form_password"]
@@ -58,7 +38,7 @@ def registration_handler():
         return
 
     response = requests.post(
-        "http://localhost:8000/api/auth/register",
+        f"{settings.API_URL}/auth/register",
         json={
             "username": st.session_state["registration_form_username"],
             "email": st.session_state["registration_form_email"],
@@ -83,7 +63,7 @@ def registration_handler():
 
 def activation_handler():
     response = requests.post(
-        "http://localhost:8000/api/auth/activate",
+        f"{settings.API_URL}/auth/activate",
         json={
             "login": st.session_state["activation_form_login"],
             "activation_token": st.session_state["activation_form_token"],
@@ -101,3 +81,74 @@ def activation_handler():
         return
 
     st.session_state["activation_success"] = True
+
+
+def reset_current_chat():
+    st.session_state["current_chat"] = Chat()
+    st.session_state["messages"] = []
+
+
+def change_chat_handler(chat_id: str):
+    load_messages(chat_id)
+
+
+def get_user_chats(page: int):
+    response = requests.get(
+        f"{settings.API_URL}/user/me/chats",
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {st.session_state['access_token']}"
+        },
+        params={
+            "page": page,
+        }
+    )
+
+    response_data = response.json()
+
+    if response.status_code != 200:
+        st.error(response_data["error"]["message"])
+        return
+
+    st.session_state["chats"]["chats"].extend([Chat.model_validate(chat) for chat in response_data["items"]])
+    st.session_state["chats"]["page"] += 1
+    st.session_state["chats"]["total"] = response_data["total"]
+
+
+def load_messages(chat_id: str):
+    response = requests.get(
+        f"{settings.API_URL}/chats/{chat_id}/messages",
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {st.session_state['access_token']}"
+        },
+    )
+
+    response_data = response.json()
+
+    if response.status_code != 200:
+        st.error(response_data["error"]["message"])
+        return
+
+    st.session_state["messages"] = [Message.model_validate(message) for message in response_data["items"]]
+
+
+def response_request(prompt: str, chat_id: str | None):
+    response = requests.put(
+        f"{settings.API_URL}/rag",
+        json={
+            "prompt": prompt,
+            "chat_id": chat_id,
+        },
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {st.session_state['access_token']}"
+        }
+    )
+
+    response_data = response.json()
+
+    if response.status_code != 201:
+        st.error(response_data["error"]["message"])
+
+    return response_data
