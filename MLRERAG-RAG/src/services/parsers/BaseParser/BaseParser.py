@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from .schemas import Document
+from src.services.parsers.schemas import Document
 from src.services.downloaders import DocumentInfo
 
 
