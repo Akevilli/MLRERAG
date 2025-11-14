@@ -1,2 +1,2 @@
-from .hugging_face_embedder import HuggingFaceEmbedder
-from .base_embedder import Embedder
+from .HuggingFaceEmbedder import HuggingFaceEmbedder
+from .BaseEmbedder import Embedder
