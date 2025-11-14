@@ -24,6 +24,7 @@ class Settings(BaseSettings):
 
     # API_KEYS
     OPENAI_API_KEY: str
+    OPENAI_MODEL: str
 
     @property
     def SQLALCHEMY_DATABASE_URI(self):
