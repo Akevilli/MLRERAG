@@ -1,3 +1,3 @@
-from .llama_parser import LlamaParser
-from .base_parser import Parser
+from .LlamaParser import LlamaParser
+from .BaseParser import Parser
 from .schemas import Document
