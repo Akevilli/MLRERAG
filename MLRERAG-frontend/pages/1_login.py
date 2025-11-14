@@ -2,6 +2,8 @@ import streamlit as st
 from handlers import login_handler
 
 
+st.set_page_config(page_title="Login")
+
 st.header("Login")
 
 with st.form("login_form"):
@@ -13,6 +15,10 @@ with st.form("login_form"):
         on_click=login_handler,
         use_container_width=True
     )
+
+with st.container(horizontal=True):
+    st.text("Don't have an account?")
+    st.page_link(page="pages/3_registration.py", label="Registration")
 
 
 
