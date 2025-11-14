@@ -1,8 +1,8 @@
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 
-from .base_embedder import Embedder
-from .schemas import ChunkWithEmbedding
 from src.services.chunkers import Chunk
+from ..BaseEmbedder import Embedder
+from ..schemas import ChunkWithEmbedding
 
 
 class HuggingFaceEmbedder(Embedder):
@@ -13,6 +13,9 @@ class HuggingFaceEmbedder(Embedder):
         chunks_with_embeddings: list[ChunkWithEmbedding] = []
 
         for chunk in chunks:
+            if chunk.text == "":
+                continue
+
             chunk_with_embeddings = ChunkWithEmbedding(
                 **chunk.model_dump(),
                 embedding=self.embedder.embed_query(chunk.text)
@@ -23,7 +26,7 @@ class HuggingFaceEmbedder(Embedder):
         return chunks_with_embeddings
 
 
-    def embed_query(self, query: str) -> dict:
+    def embed_query(self, query: str) -> list[float]:
         embedding = self.embedder.embed_query(query)
 
-        return {"query": query, "embedding": embedding}
+        return embedding
