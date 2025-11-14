@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 from src.api.schemas import UploadSchema
 
-from .schemas import DocumentInfo
+from src.services.downloaders.schemas import DocumentInfo
 
 
 class Downloader(ABC):
