@@ -43,7 +43,7 @@ _email_service = EmailService()
 _token_service = TokenService(_refresh_token_repository)
 _auth_service = AuthService(_user_service, _email_service, _token_service)
 _chat_service = ChatService(_chat_repository)
-_message_service = MessageService(_message_repository)
+_message_service = MessageService(_message_repository, _chat_service)
 _rag_service = RAGService(_chat_service, _message_service)
 
 
