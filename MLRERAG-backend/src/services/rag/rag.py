@@ -3,9 +3,9 @@ from sqlalchemy.orm import Session
 
 from src.core import settings
 from src.api.schemas import RAGQuerySchema
-from src.services import ChatService, CreateChatSchema, MessageService, CreateMessageSchema
-from src.models import Message
-from .schemas import MessageSchema, RAGResponseSchema, ChatSchema, RAGRServiceResponseSchema
+from src.services.chats import ChatService, CreateChatSchema, ChatSchema
+from src.services.messages import MessageService, CreateMessageSchema, MessageSchema, MessagePaginationSchema
+from .schemas import RAGResponseSchema, RAGRServiceResponseSchema
 
 
 class RAGService:
@@ -23,12 +23,22 @@ class RAGService:
         user_credentials: dict,
         session: Session
     ) -> RAGRServiceResponseSchema | dict:
-        messages: list[Message] = []
+        messages = MessagePaginationSchema(
+            items=[],
+            total=0,
+            page=0
+        )
 
         if query.chat_id is not None:
-            messages = self.__message_service.get_latest_chat_messages(query.chat_id, session)
+            messages = self.__message_service.get_latest_chat_messages(query.chat_id, user_credentials, session)
 
-        transformed_messages = [MessageSchema(content=message.content, is_users=message.is_users) for message in messages]
+        transformed_messages = [
+            MessageSchema(
+                content=message.content,
+                is_users=message.is_users
+            )
+            for message in messages.items
+        ]
         transformed_messages.append(MessageSchema(content=query.prompt, is_users=True))
 
         response = requests.post(
@@ -42,7 +52,7 @@ class RAGService:
         result = RAGResponseSchema(**response.json())
 
         if query.chat_id is not None:
-            chat = self.__chat_service.get_by_id(query.chat_id, session)
+            chat = self.__chat_service.get_by_id(query.chat_id, user_credentials, session)
         else:
             chat = self.__chat_service.create(CreateChatSchema(
                 title=" ".join(result.answer.split()[:3]),
