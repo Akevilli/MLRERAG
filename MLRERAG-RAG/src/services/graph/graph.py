@@ -1,8 +1,9 @@
 from typing import Literal
+import yaml
 
-from langchain_core.messages import ToolMessage
-from langchain.tools import tool
-from langchain_openai import ChatOpenAI
+from langchain_core.messages import ToolMessage, SystemMessage
+from langchain_core.tools import Tool
+from langchain_xai import ChatXAI
 from langchain_postgres import PGVectorStore
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode
@@ -13,19 +14,30 @@ from .schemas import State
 
 class Graph:
     def __init__(self,
-        llm: ChatOpenAI,
+        llm: ChatXAI,
         vector_store: PGVectorStore,
     ):
-        self.__final_llm = llm
-        self.__orchestrator = llm.bind_tools([self._rag_tool])
+        try:
+            with open("cache/prompts.yaml", "r") as f:
+                self.__prompts = yaml.safe_load(f)
+        except FileNotFoundError:
+            raise FileNotFoundError("Error: prompts/rag_prompts.yaml not found.")
 
         self.__vector_store = vector_store
+        self.__rag_tool = Tool.from_function(
+            self._rag_tool,
+            description=self.__prompts["rag_tool_description"],
+            name="rag_tool",
+        )
+
+        self.__final_llm = llm
+        self.__orchestrator = llm.bind_tools([self.__rag_tool])
 
         self.__workflow = StateGraph(State)
 
         self.__workflow.add_node("orchestrator_node", self._orchestrator_node)
         self.__workflow.add_node("final_answer_generation_node", self._final_answer_generation_node)
-        self.__workflow.add_node("rag_tool_node", ToolNode([self._rag_tool]))
+        self.__workflow.add_node("rag_tool_node", ToolNode([self.__rag_tool]))
 
         self.__workflow.add_edge(START, "orchestrator_node")
         self.__workflow.add_conditional_edges(
@@ -43,7 +55,6 @@ class Graph:
 
 
     # Tools
-    @tool(description="RAG tool where model can find any information about ML/DL.")
     def _rag_tool(self, query: str):
         retrieved_chunks = self.__vector_store.similarity_search(query, k=10)
         result = "".join([chunk.page_content for chunk in retrieved_chunks])
@@ -52,7 +63,12 @@ class Graph:
 
     # Nodes
     def _orchestrator_node(self, state: State) -> State:
-        orchestrator_answer = self.__orchestrator.invoke(state["messages"])
+        chat = [
+            SystemMessage(content=self.__prompts["orchestrator_system_prompt"]),
+            *state["messages"]
+        ]
+        orchestrator_answer = self.__orchestrator.invoke(chat)
+        print(orchestrator_answer)
 
         return {
             "messages": [*state["messages"], orchestrator_answer],
@@ -62,17 +78,22 @@ class Graph:
 
 
     def _final_answer_generation_node(self, state: State) -> State:
-        final_answer = self.__final_llm.invoke(state["messages"])
+        chat = [
+            SystemMessage(content=self.__prompts["final_generation_system_prompt"]),
+            *state["messages"]
+        ]
+
+        final_answer = self.__final_llm.invoke(chat)
 
         documents = ""
-        last_message = final_answer["messages"][-1]
+        last_message = state["messages"][-1]
 
         if isinstance(last_message, ToolMessage):
             documents = last_message.text
 
         return {
             "messages": state["messages"],
-            "answer": final_answer["answer"],
+            "answer": final_answer.text,
             "documents": documents,
         }
 
