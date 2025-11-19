@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from src.repositories import RefreshTokenRepository
 from src.models import RefreshToken, User
-from src.core import settings
+from src.core import settings, retry_strategy
 
 
 class TokenService:
@@ -23,8 +23,9 @@ class TokenService:
         hashed_token = bcrypt.hashpw(bytes(token, "utf-8"), bcrypt.gensalt())
 
         return token, hashed_token
-    
 
+
+    @retry_strategy
     def create_refreshToken(self, owner_id: UUID, session: Session) -> RefreshToken:
         active_tokens: list[RefreshToken] = self.__rt_repository.get_active_token(owner_id, session)
 
