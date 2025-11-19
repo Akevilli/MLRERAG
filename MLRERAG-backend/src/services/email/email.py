@@ -3,10 +3,11 @@ import ssl
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-from src.core import settings
+from src.core import settings, retry_strategy
 
 
 class EmailService:
+    @retry_strategy
     def sent_welcome_email(self, receiver: str, token: str):
         message = MIMEMultipart()
 

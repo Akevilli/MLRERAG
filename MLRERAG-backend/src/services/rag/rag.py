@@ -1,7 +1,7 @@
 import requests
 from sqlalchemy.orm import Session
 
-from src.core import settings
+from src.core import settings, retry_strategy
 from src.api.schemas import RAGQuerySchema
 from src.services.chats import ChatService, CreateChatSchema, ChatSchema
 from src.services.messages import MessageService, CreateMessageSchema, MessageSchema, MessagePaginationSchema
@@ -17,6 +17,8 @@ class RAGService:
         self.__chat_service = chat_service
         self.__message_service = message_service
 
+
+    @retry_strategy
     def generate_answer(
         self,
         query: RAGQuerySchema,
@@ -55,7 +57,7 @@ class RAGService:
             chat = self.__chat_service.get_by_id(query.chat_id, user_credentials, session)
         else:
             chat = self.__chat_service.create(CreateChatSchema(
-                title=" ".join(result.answer.split()[:3]),
+                title=" ".join(result.answer.split()[:4]),
                 owner_id=user_credentials["user_id"],
             ), session)
 
