@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from fastapi.exceptions import HTTPException
 from email_validator import validate_email, EmailNotValidError
 
+from src.core import retry_strategy
 from src.services import UserService, EmailService, TokenService
 from src.api.schemas import (
     CreateUserSchema, 
@@ -25,6 +26,7 @@ class AuthService:
         self.__token_service = token_service
 
 
+    @retry_strategy
     def register(self, new_user_data: CreateUserSchema, session: Session) -> User:
         new_user_data_dict = new_user_data.model_dump()
 
@@ -48,8 +50,9 @@ class AuthService:
         self.__email_service.sent_welcome_email(new_user_data_dict["email"], token)
 
         return new_user
-    
 
+
+    @retry_strategy
     def activate(self, user_data: ActivateUserSchema, session: Session) -> None:
         
         try:
@@ -62,8 +65,9 @@ class AuthService:
             raise HTTPException(400, "The provided activation token is invalid or incorrect.")
         
         user.is_activated = True
-    
 
+
+    @retry_strategy
     def login(self, user_data: LoginUserSchema, session : Session) -> LoginedUserView:
 
         try:
