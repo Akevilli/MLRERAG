@@ -23,8 +23,8 @@ class Settings(BaseSettings):
     DEVICE: str
 
     # API_KEYS
-    OPENAI_API_KEY: str
-    OPENAI_MODEL: str
+    GROK_API_KEY: str
+    GROK_MODEL: str
 
     @property
     def SQLALCHEMY_DATABASE_URI(self):
