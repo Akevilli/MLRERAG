@@ -4,7 +4,7 @@ from typing import Generator, Any
 from logging import Logger
 
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_openai import ChatOpenAI
+from langchain_xai import ChatXAI
 from langchain_postgres import PGVectorStore, PGEngine
 from llama_cloud_services import LlamaParse
 from langchain_experimental.text_splitter import SemanticChunker
@@ -38,9 +38,9 @@ _embedder = HuggingFaceEmbeddings(
     encode_kwargs={'normalize_embeddings': True}
 )
 _llama_parse = LlamaParse(api_key=settings.LLAMA_PARSER_API_KEY, num_workers=1, verbose=False, language="en")
-_openai_llm = ChatOpenAI(
-    api_key=settings.OPENAI_API_KEY,
-    model=settings.OPENAI_MODEL
+_grok_llm = ChatXAI(
+    api_key=settings.GROK_API_KEY,
+    model=settings.GROK_MODEL
 )
 
 
@@ -102,7 +102,7 @@ def get_chunk_repository() -> ChunkRepository:
 
 # Graph
 _graph = Graph(
-    llm=_openai_llm,
+    llm=_grok_llm,
     vector_store=_vector_store,
 )
 
