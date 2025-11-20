@@ -1,8 +1,7 @@
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 
-from src.services.chunkers import Chunk
+from src.services.chunks import Chunk, ChunkWithEmbedding
 from ..BaseEmbedder import Embedder
-from ..schemas import ChunkWithEmbedding
 
 
 class HuggingFaceEmbedder(Embedder):
@@ -13,7 +12,7 @@ class HuggingFaceEmbedder(Embedder):
         chunks_with_embeddings: list[ChunkWithEmbedding] = []
 
         for chunk in chunks:
-            if chunk.text == "":
+            if str.isspace(chunk.text) or chunk.text == "":
                 continue
 
             chunk_with_embeddings = ChunkWithEmbedding(
