@@ -1,13 +1,15 @@
 from langchain_experimental.text_splitter import SemanticChunker
 
 from ..BaseChunker import Chunker
-from src.services.chunkers.schema import Chunk
+from src.services.chunks import Chunk, ChunkMetadata
 from src.services.parsers import Document
 
 
-
 class SemanticBaseChunker(Chunker):
-    def __init__(self, chunker: SemanticChunker):
+    def __init__(
+        self,
+        chunker: SemanticChunker,
+    ):
         self.__chunker = chunker
 
     def chunk(self, documents: list[Document]) -> list[Chunk]:
@@ -18,9 +20,17 @@ class SemanticBaseChunker(Chunker):
 
             for index, chunk_text in enumerate(chunks_text):
                 chunk = Chunk(
-                    document_id=document.id,
                     text=chunk_text,
-                    chunk_index=index,
+                    chunk_metadata=ChunkMetadata(
+                        document_id=document.document_id,
+                        title=document.title,
+                        summary=document.summary,
+                        source_url=document.source_url,
+                        published_at=document.published_at,
+                        authors=document.authors,
+                        page=document.page,
+                        keywords=document.keywords
+                    )
                 )
                 
                 chunks.append(chunk)

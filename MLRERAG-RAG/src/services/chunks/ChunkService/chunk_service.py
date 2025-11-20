@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 
 from src.models import Chunk
 from src.repositories import ChunkRepository
-from src.services.embedders.schemas import ChunkWithEmbedding
+from src.services.chunks.schemas import ChunkWithEmbedding
 
 
 class ChunkService:
@@ -10,7 +10,12 @@ class ChunkService:
         self.__chunk_repository = chunk_repository
 
     def create(self, new_chunks: list[ChunkWithEmbedding], session: Session):
-        chunks = [Chunk(**chunk.model_dump()) for chunk in new_chunks]
+        chunks = [
+            Chunk(
+                **chunk.model_dump()
+            )
+            for chunk in new_chunks
+        ]
 
         self.__chunk_repository.create(chunks, session)
 
