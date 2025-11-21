@@ -2,6 +2,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from src.core import retry_strategy
 from src.services.chats import ChatService
 from src.repositories import MessageRepository
 from src.models import Message
@@ -18,6 +19,7 @@ class MessageService:
         self.__chat_service = chat_service
 
 
+    @retry_strategy
     def get_latest_chat_messages(
         self,
         chat_id: UUID,
@@ -26,6 +28,9 @@ class MessageService:
     ) -> MessagePaginationSchema:
         chat = self.__chat_service.get_by_id(chat_id, user_credentials, session)
         total, messages = self.__message_repository.get_latest_messages_by_chat_id(chat.id, session)
+
+
+
         return MessagePaginationSchema(
             total=total,
             items=[MessageSchema.model_validate(message) for message in messages],
@@ -33,6 +38,7 @@ class MessageService:
         )
 
 
+    @retry_strategy
     def create(self, message_schema: CreateMessageSchema, session: Session) -> Message:
         message = Message(**message_schema.model_dump())
         message = self.__message_repository.create(message, session)

@@ -5,5 +5,5 @@ from pydantic import BaseModel, Field
 
 
 class RAGQuerySchema(BaseModel):
-    prompt: str = Field(..., max_length=1500)
+    prompt: str = Field(..., max_length=5000)
     chat_id: Optional[UUID] = Field(default=None)
