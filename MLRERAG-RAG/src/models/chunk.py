@@ -1,16 +1,12 @@
 import uuid
-from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, Index
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Index
+from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.orm import Mapped, mapped_column
 from pgvector.sqlalchemy import Vector
 
 from .base import Base
 
-
-if TYPE_CHECKING:
-    from .document import Document
 
 class Chunk(Base):
     __tablename__ = 'chunks'
@@ -21,11 +17,9 @@ class Chunk(Base):
         default_factory=uuid.uuid4,
         init=False
     )
-    document_id: Mapped[str] = mapped_column(ForeignKey('documents.id'))
-    document: Mapped["Document"] = relationship(back_populates="chunks", init=False)
     text: Mapped[str] = mapped_column(nullable=False)
-    chunk_index: Mapped[int] = mapped_column(nullable=False)
     embedding: Mapped[Vector] = mapped_column(Vector(384), nullable=False)
+    chunk_metadata: Mapped[JSONB] = mapped_column(JSONB, nullable=False)
 
     __table_args__ = (
         Index(
