@@ -67,7 +67,6 @@ class Graph:
             SystemMessage(content=self.__prompts["orchestrator_system_prompt"])
         ]
         orchestrator_answer = self.__orchestrator.invoke(chat)
-        print(orchestrator_answer)
 
         return {
             "messages": [*state["messages"], orchestrator_answer],
