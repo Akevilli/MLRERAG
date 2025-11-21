@@ -47,7 +47,33 @@ final_generation_system_prompt: |
 
 rag_tool_description: |
   **RAG_TOOL**: Retrieves context from a specialized vector database of ML/DL research papers.
-  The tool requires **one argument**: `query`. 
-  **CRITICAL INSTRUCTION**: The `query` you pass MUST be a concise, optimized search phrase (1-10 words) 
+  The tool requires the next arguments **argument**: 
+  * `query` - The `query` you pass MUST be a concise, optimized search phrase (1-10 words) 
   derived from the user's input. Reformulate the user's question into concrete, high-relevance keywords to 
   improve document retrieval quality. Example: 'BERT long sequence handling'.
+  * `filters` - The `filters` are used to filter chunks, by its metadata, before main semantic search. Metadata includes
+  the next fields those can be useful:
+    * title: string - The title of paper, you can use it to find popular papers, or if user provided you the 
+    title of paper.
+    * published_at: str in ISO format - If user provide certain date or range of dates you can use this filed, this field 
+    has iso format.
+    * authors: list of str - If user provided name of authors you can use this field.
+    * keywords: list of str - stores keywords from paper in lower case, you must use this filed for each call, it's your
+    main tool for pre-semantic search filtering.
+  | Operator | Meaning/Category |
+  |:---|:---|
+  | $eq | Equality (==) |
+  | $ne | Inequality (!=) |
+  | $lt | Less than (<) |
+  | $lte | Less than or equal (<=) |
+  | $gt | Greater than (>) |
+  | $gte | Greater than or equal (>=) |
+  | $in | Special Cased (in) |
+  | $nin | Special Cased (not in) |
+  | $between | Special Cased (between) |
+  | $exists | Special Cased (is null) |
+  | $like | Text (like) |
+  | $ilike | Text (case-insensitive like) |
+  | $and | Logical (and) |
+  | $or | Logical (or) |
+  template: {"<metadata_filed_name>": {"<operator>": "<value>"}, ...}

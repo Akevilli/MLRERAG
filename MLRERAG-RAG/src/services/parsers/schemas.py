@@ -1,5 +1,7 @@
-from src.services.downloaders import DocumentInfo
+from src.services.chunks import DocumentMetadata
 
 
-class Document(DocumentInfo):
+class Document(DocumentMetadata):
     text: str
+    page: int
+    keywords: list[str]
