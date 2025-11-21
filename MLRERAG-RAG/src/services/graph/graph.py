@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Any
 import yaml
 
 from langchain_core.messages import ToolMessage, SystemMessage
@@ -9,7 +9,6 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode
 
 from .schemas import State
-
 
 
 class Graph:
@@ -55,9 +54,9 @@ class Graph:
 
 
     # Tools
-    def _rag_tool(self, query: str):
-        retrieved_chunks = self.__vector_store.similarity_search(query, k=10)
-        result = "".join([chunk.page_content for chunk in retrieved_chunks])
+    def _rag_tool(self, query: str, filters: dict[str, dict[str, Any]] | None = None):
+        retrieved_chunks = self.__vector_store.similarity_search(query, k=10, filter=filters)
+        result = "\n".join([chunk.page_content for chunk in retrieved_chunks])
         return result
 
 
@@ -68,6 +67,7 @@ class Graph:
             SystemMessage(content=self.__prompts["orchestrator_system_prompt"])
         ]
         orchestrator_answer = self.__orchestrator.invoke(chat)
+        print(orchestrator_answer)
 
         return {
             "messages": [*state["messages"], orchestrator_answer],

@@ -51,8 +51,9 @@ _vector_store = PGVectorStore.create_sync(
     table_name="chunks",
     id_column="id",
     content_column="text",
+    embedding_column="embedding",
+    metadata_json_column="chunk_metadata",
     embedding_service=_embedder,
-    embedding_column="embedding"
 )
 
 # DB
@@ -70,12 +71,14 @@ def get_session() -> Generator[Session, Any, None]:
     finally:
         _session.close()
 
+# metadata
+_yake_extractor = YAKE(top=7, window_size=2, deduplication_threshold=0.1, deduplication_algo="lev")
 
 # Downloaders
 _arxiv_downloader = ArxivDownloader()
 
 # Parsers
-_llama_parser = LlamaParser(_llama_parse)
+_llama_parser = LlamaParser(_llama_parse, _yake_extractor)
 
 # Chunkers
 _semantic_base_chunker = SemanticChunker(
@@ -90,11 +93,7 @@ _semantic_chunker = SemanticBaseChunker(_semantic_base_chunker)
 _hugging_face_embedder = HuggingFaceEmbedder(_embedder)
 
 # Repositories
-_document_repository = DocumentRepository()
 _chunk_repository = ChunkRepository()
-
-def get_document_repository() -> DocumentRepository:
-    return _document_repository
 
 def get_chunk_repository() -> ChunkRepository:
     return _chunk_repository
@@ -107,20 +106,16 @@ _graph = Graph(
 )
 
 # Services
-_document_service = DocumentService(_document_repository)
 _chunks_service = ChunkService(_chunk_repository)
 _rag_service = RAGService(
     downloader=_arxiv_downloader,
     parser=_llama_parser,
     chunker=_semantic_chunker,
     embedder=_hugging_face_embedder,
-    document_service=_document_service,
     chunk_service=_chunks_service,
     graph=_graph
 )
 
-def get_document_service() -> DocumentService:
-    return _document_service
 
 def get_chunks_service() -> ChunkService:
     return _chunks_service
