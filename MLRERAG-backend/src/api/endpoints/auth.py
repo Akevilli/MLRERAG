@@ -9,7 +9,9 @@ from src.api.schemas import (
     CreateUserSchema, 
     ActivateUserSchema,
     LoginUserSchema,
-    LoginedUserView
+    LoggedUserView,
+    RefreshJWTSchema,
+    UpdateJWTSchema
 )
 
 
@@ -47,7 +49,7 @@ def activate(
 @router.post(
     "/login",
     status_code=status.HTTP_200_OK,
-    response_model=LoginedUserView
+    response_model=LoggedUserView
 )
 def login(
     login_user_data: LoginUserSchema,
@@ -55,6 +57,22 @@ def login(
     session: Session = Depends(get_session),
     logger: Logger = Depends(get_logger)
 ):
-    logined_user = auth_service.login(login_user_data, session)
-    logger.info(f"Login user: {logined_user.username}:{logined_user.email}")
-    return logined_user
+    logged_user = auth_service.login(login_user_data, session)
+    logger.info(f"Login user: {logged_user.username}:{logged_user.email}")
+    return logged_user
+
+
+@router.post(
+    "/refresh",
+    status_code=status.HTTP_201_CREATED,
+    response_model=RefreshJWTSchema
+)
+def refresh(
+    update_jwt_schema: UpdateJWTSchema,
+    auth_service: AuthService = Depends(get_auth_service),
+    session: Session = Depends(get_session),
+    logger: Logger = Depends(get_logger)
+):
+    response = auth_service.refresh_jwt(update_jwt_schema, session)
+    logger.info(f"User: {update_jwt_schema.user_id} updated jwt token.")
+    return response
