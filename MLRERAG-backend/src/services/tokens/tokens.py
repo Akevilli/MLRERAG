@@ -26,7 +26,7 @@ class TokenService:
 
 
     @retry_strategy
-    def create_refreshToken(self, owner_id: UUID, session: Session) -> RefreshToken:
+    def create_refresh_token(self, owner_id: UUID, session: Session) -> RefreshToken:
         active_tokens: list[RefreshToken] = self.__rt_repository.get_active_token(owner_id, session)
 
         for active_token in active_tokens:
@@ -36,6 +36,16 @@ class TokenService:
         self.__rt_repository.create(new_token, session)
 
         return new_token
+
+
+    @retry_strategy
+    def check_refresh_token(self, user_id: UUID, refresh_token: UUID, session: Session) -> bool:
+        active_token = self.__rt_repository.get_active_by_user_id_and_token(user_id, refresh_token, session)
+
+        if active_token is None:
+            return False
+
+        return True
     
 
     def generate_jwt_token(self, user: User) -> str:
