@@ -9,7 +9,9 @@ from src.api.schemas import (
     CreateUserSchema, 
     ActivateUserSchema, 
     LoginUserSchema,
-    LoginedUserView
+    LoggedUserView,
+    UpdateJWTSchema,
+    RefreshJWTSchema
 )
 from src.models import User
 
@@ -68,7 +70,7 @@ class AuthService:
 
 
     @retry_strategy
-    def login(self, user_data: LoginUserSchema, session : Session) -> LoginedUserView:
+    def login(self, user_data: LoginUserSchema, session : Session) -> LoggedUserView:
 
         try:
             validate_email(user_data.login, check_deliverability=False)
@@ -88,9 +90,9 @@ class AuthService:
             raise HTTPException(404, "Invalid username/email or password.")
 
         jwt_token = self.__token_service.generate_jwt_token(user)
-        refresh_token = self.__token_service.create_refreshToken(user.id, session)
+        refresh_token = self.__token_service.create_refresh_token(user.id, session)
 
-        result = LoginedUserView(
+        result = LoggedUserView(
             id=user.id,
             username=user.username,
             email=user.email,
@@ -101,4 +103,18 @@ class AuthService:
         )
 
         return result
+
+
+    @retry_strategy
+    def refresh_jwt(self, update_jwt: UpdateJWTSchema, session: Session) -> RefreshJWTSchema:
+        if not self.__token_service.check_refresh_token(**update_jwt.model_dump(), session=session):
+            raise HTTPException(403, "Refresh token is invalid.")
+
+        user = self.__user_service.get_by_id(update_jwt.user_id, session=session)
+
+        jwt_token = self.__token_service.generate_jwt_token(user)
+        refresh_token = self.__token_service.create_refresh_token(user.id, session)
+
+        return RefreshJWTSchema(access_token=jwt_token, refresh_token=refresh_token.id)
+
         
