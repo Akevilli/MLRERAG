@@ -16,3 +16,12 @@ class RefreshTokenRepository(BaseRepository):
 
         result = session.execute(query)
         return result.scalars().all()
+
+    def get_active_by_user_id_and_token(self, user_id: UUID, token: UUID, session: Session) -> RefreshToken | None:
+        query = select(RefreshToken).where(
+            (RefreshToken.id == token) &
+            (RefreshToken.owner_id == user_id) &
+            (RefreshToken.is_revoked == False)
+        )
+        result = session.execute(query)
+        return result.scalar_one_or_none()

@@ -1,29 +1,10 @@
 from uuid import UUID
 from datetime import datetime
-from typing import Annotated
-import re
-
-from pydantic import BaseModel, EmailStr, Field, ConfigDict
-
-from src.core import settings
-
-
-class CreateUserSchema(BaseModel):
-    model_config = ConfigDict(
-        regex_engine="python-re"
-    )
-
-    username: str
-    email: EmailStr
-    password: Annotated[str, Field(
-        min_length=6,
-        max_length=64,
-        pattern=re.compile(r"^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&_;])[A-Za-z\d@$!%*#?&_;]{8,}$")
-    )]
-    confirm_password: str
+from pydantic import BaseModel, EmailStr, ConfigDict
 
 
 class UserViewSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
 
     id: UUID
     username: str
@@ -32,22 +13,8 @@ class UserViewSchema(BaseModel):
     updated_at: datetime
 
 
-class ActivateUserSchema(BaseModel):
-
-    login: EmailStr | str
-    activation_token: Annotated[str, Field(
-        min_length=settings.ACTIVATION_TOKEN_LENGTH + 2,
-        max_length=settings.ACTIVATION_TOKEN_LENGTH + 2
-    )]
-
-
-class LoginUserSchema(BaseModel):
-
-    login: EmailStr | str
-    password: str
-
-
-class LoginedUserView(UserViewSchema):
+class LoggedUserView(UserViewSchema):
+    model_config = ConfigDict(from_attributes=True)
 
     access_token: str
     refresh_token: UUID
