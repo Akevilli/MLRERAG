@@ -33,6 +33,10 @@ class Settings(BaseSettings):
 
     CONTEXT_WINDOW: int
 
+    REDIS_HOST: str
+    REDIS_PORT: str
+    REDIS_TTL: int
+
     @property
     def SQLALCHEMY_DATABASE_URI(self):
         return (f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@"
@@ -41,5 +45,10 @@ class Settings(BaseSettings):
     @property
     def RAG_SERVICE_URL(self):
         return f"http://{self.RAG_SERVICE_HOST}:{self.RAG_SERVICE_PORT}"
+
+    @property
+    def REDIS_URL(self):
+        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}"
+
 
 settings = Settings()
