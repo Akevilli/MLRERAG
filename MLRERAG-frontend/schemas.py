@@ -9,7 +9,12 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
-    API_URL: str
+    API_HOST: str
+    API_PORT: int
+
+    @property
+    def API_URL(self) -> str:
+        return f"http://{self.API_HOST}:{self.API_PORT}"
 
 
 class Chat(BaseModel):
@@ -34,6 +39,11 @@ class GeneratedResponse(BaseModel):
     answer: str
     documents: str
     chat: Chat
+
+
+class TokensSchema(BaseModel):
+    access_token: str
+    refresh_token: str
 
 
 class PaginatedAPIResponse[T: BaseModel](BaseModel):
