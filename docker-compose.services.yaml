@@ -1,0 +1,32 @@
+services:
+  db:
+    image: MLRERAG/postgresql:pg_vector
+    container_name: postgres-MLRERAG
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 15192006Nn
+      POSTGRES_DB: MLRERAG
+    ports:
+      - "5433:5432" 
+    volumes:
+      - postgres_data:\var\Projects\MLRERAG\postgres
+    networks:
+      - MLRERAG_network
+
+  redis:
+    image: redis:8.4.0-alpine
+    container_name: redis-MLRERAG
+    restart: always
+    ports:
+      - "6428:6379" 
+    networks:
+      - MLRERAG_network
+
+volumes:
+  postgres_data:
+
+networks:
+  MLRERAG_network:
+    driver: bridge
+    external: true
