@@ -1,10 +1,43 @@
+from datetime import datetime, timezone
+
 import requests
+import streamlit as st
+import jwt
+
 from schemas import *
 
 
+def check_jwt():
+    encoded_jwt_token = st.session_state["user"].access_token
+    payload = jwt.decode(encoded_jwt_token, options={"verify_signature": False})
+
+    if (payload["exp"] - 20 < datetime.now(timezone.utc).timestamp() and
+        st.session_state["user"].refresh_token):
+        response = requests.post(
+            f"{settings.API_URL}/auth/refresh",
+            json={
+                "user_id": st.session_state["user"].id,
+                "refresh_token": st.session_state["user"].refresh_token
+            }
+        )
+
+        response_data = TokensSchema.model_validate(response.json())
+
+        if response.status_code != 201:
+            del st.session_state["user"]
+            st.switch_page("pages/1_login.py")
+
+        st.session_state["user"].access_token = response_data.access_token
+        st.session_state["user"].refresh_token = response_data.refresh_token
+
+
+session = requests.Session()
+
+
 def login(login_str: str, password: str) -> Response[User]:
+    print(f"{settings.API_URL}/api/auth/login")
     response = requests.post(
-        f"{settings.API_URL}/auth/login",
+        f"{settings.API_URL}/api/auth/login",
         json={
             "login": login_str,
             "password": password,
@@ -12,6 +45,9 @@ def login(login_str: str, password: str) -> Response[User]:
     )
 
     response_data = response.json()
+
+    if response.status_code == 403:
+        st.switch_page("pages/2_activation.py")
 
     if response.status_code != 200:
         message = response_data.get("error", {}).get("message")
@@ -27,7 +63,7 @@ def registration(
     confirm_password: str,
 ) -> Response[None]:
     response = requests.post(
-        f"{settings.API_URL}/auth/register",
+        f"{settings.API_URL}/api/auth/register",
         json={
             "username": username,
             "email": email,
@@ -47,7 +83,7 @@ def registration(
 
 def activation(login_str: str, token: str) -> Response[None]:
     response = requests.post(
-        f"{settings.API_URL}/auth/activate",
+        f"{settings.API_URL}/api/auth/activate",
         json={
             "login": login_str,
             "activation_token": token,
@@ -63,11 +99,12 @@ def activation(login_str: str, token: str) -> Response[None]:
     return Response.success(None)
 
 
-def get_chat_by_id(chat_id: str, access_token: str) -> Response[Chat]:
-    response = requests.get(
-        f"{settings.API_URL}/chats/{chat_id}",
+def get_chat_by_id(chat_id: str) -> Response[Chat]:
+    check_jwt()
+    response = session.get(
+        f"{settings.API_URL}/api/chats/{chat_id}",
         headers={
-            "Authorization": f"Bearer {access_token}",
+            "Authorization": f"Bearer {st.session_state['user'].access_token}",
         }
     )
 
@@ -80,12 +117,13 @@ def get_chat_by_id(chat_id: str, access_token: str) -> Response[Chat]:
     return Response.success(Chat.model_validate(response_data))
 
 
-def get_latest_messages(chat_id: str, access_token: str) -> Response[PaginatedAPIResponse[Message]]:
-    response = requests.get(
-        f"{settings.API_URL}/messages/chats/{chat_id}",
+def get_latest_messages(chat_id: str) -> Response[PaginatedAPIResponse[Message]]:
+    check_jwt()
+    response = session.get(
+        f"{settings.API_URL}/api/messages/chats/{chat_id}",
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {access_token}"
+            "Authorization": f"Bearer {st.session_state['user'].access_token}"
         },
     )
 
@@ -100,12 +138,13 @@ def get_latest_messages(chat_id: str, access_token: str) -> Response[PaginatedAP
     )
 
 
-def get_users_chats(page: int, access_token: str) -> Response[PaginatedAPIResponse[Chat]]:
-    response = requests.get(
-        f"{settings.API_URL}/chats/me",
+def get_users_chats(page: int) -> Response[PaginatedAPIResponse[Chat]]:
+    check_jwt()
+    response = session.get(
+        f"{settings.API_URL}/api/chats/me",
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {access_token}",
+            "Authorization": f"Bearer {st.session_state['user'].access_token}",
         },
         params={
             "page": page,
@@ -123,16 +162,17 @@ def get_users_chats(page: int, access_token: str) -> Response[PaginatedAPIRespon
     )
 
 
-def generate_answer(prompt: str, chat_id: str | None, access_token: str) -> Response[GeneratedResponse]:
-    response = requests.put(
-        f"{settings.API_URL}/rag",
+def generate_answer(prompt: str, chat_id: str | None) -> Response[GeneratedResponse]:
+    check_jwt()
+    response = session.put(
+        f"{settings.API_URL}/api/rag",
         json={
             "prompt": prompt,
             "chat_id": chat_id,
         },
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {access_token}"
+            "Authorization": f"Bearer {st.session_state['user'].access_token}"
         }
     )
 
