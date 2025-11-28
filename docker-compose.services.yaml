@@ -1,5 +1,7 @@
 services:
   db:
+    build:
+      context: ./third-party
     image: MLRERAG/postgresql:pg_vector
     container_name: postgres-MLRERAG
     restart: always
@@ -10,7 +12,7 @@ services:
     ports:
       - "5433:5432" 
     volumes:
-      - postgres_data:\var\Projects\MLRERAG\postgres
+      - postgres_data:/var/lib/postgresql
     networks:
       - MLRERAG_network
 
