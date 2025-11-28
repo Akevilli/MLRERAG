@@ -5,3 +5,4 @@ from .auth import *
 from .chats import *
 from .messages import *
 from .rag import *
+from .redis import *

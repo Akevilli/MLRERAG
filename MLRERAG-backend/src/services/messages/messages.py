@@ -28,6 +28,9 @@ class MessageService:
     ) -> MessagePaginationSchema:
         chat = self.__chat_service.get_by_id(chat_id, user_credentials, session)
         total, messages = self.__message_repository.get_latest_messages_by_chat_id(chat.id, session)
+
+
+
         return MessagePaginationSchema(
             total=total,
             items=[MessageSchema.model_validate(message) for message in messages],
