@@ -1,4 +1,3 @@
-import streamlit as st
 from api import *
 
 
@@ -58,10 +57,7 @@ def reset_current_chat():
 
 
 def change_chat_handler(chat_id: str):
-    chat_response = get_chat_by_id(
-        chat_id,
-        st.session_state["user"].access_token
-    )
+    chat_response = get_chat_by_id(chat_id)
 
     if not chat_response.is_success:
         st.error(chat_response.message)
@@ -69,10 +65,7 @@ def change_chat_handler(chat_id: str):
 
     st.session_state["current_chat"] = chat_response.data
 
-    message_response = get_latest_messages(
-        chat_id,
-        st.session_state["user"].access_token
-    )
+    message_response = get_latest_messages(chat_id)
 
     if not message_response.is_success:
         st.error(message_response.message)
@@ -82,10 +75,7 @@ def change_chat_handler(chat_id: str):
 
 
 def get_user_chats(page: int):
-    response = get_users_chats(
-        page,
-        st.session_state["user"].access_token
-    )
+    response = get_users_chats(page)
 
     if not response.is_success:
         st.error(response.message)
@@ -95,11 +85,7 @@ def get_user_chats(page: int):
 
 
 def generate_response(prompt: str, chat_id: str | None) -> GeneratedResponse | None:
-    response = generate_answer(
-        prompt,
-        chat_id,
-        st.session_state["user"].access_token
-    )
+    response = generate_answer(prompt, chat_id)
 
     if not response.is_success:
         st.error(response.message)
