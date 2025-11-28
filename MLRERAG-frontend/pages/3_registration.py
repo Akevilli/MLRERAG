@@ -30,4 +30,4 @@ if "registration_success" in st.session_state and st.session_state["registration
     del st.session_state["registration_form_password"]
     del st.session_state["registration_form_confirm_password"]
 
-    st.switch_page("pages/1_login.py")
+    st.switch_page("pages/2_activation.py")
