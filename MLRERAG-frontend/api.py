@@ -35,7 +35,6 @@ session = requests.Session()
 
 
 def login(login_str: str, password: str) -> Response[User]:
-    print(f"{settings.API_URL}/api/auth/login")
     response = requests.post(
         f"{settings.API_URL}/api/auth/login",
         json={
