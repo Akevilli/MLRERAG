@@ -1,0 +1,34 @@
+services:
+  db:
+    build:
+      context: ./third-party
+    image: MLRERAG/postgresql:pg_vector
+    container_name: postgres-MLRERAG
+    environment:
+      POSTGRES_PASSWORD: LxJd5ouMt%|HVGXL
+      POSTGRES_DB: MLRERAG
+    ports:
+      - 5433:5432
+    networks:
+      - MLRERAG_network
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    
+  redis:
+    image: redis:8.4.0-alpine
+    ports:
+      - 6379:6379
+    networks:
+      - MLRERAG_network
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  MLRERAG_network:
+    driver: bridge
+    external: true
+    
