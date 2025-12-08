@@ -14,7 +14,7 @@ def check_jwt():
     if (payload["exp"] - 20 < datetime.now(timezone.utc).timestamp() and
         st.session_state["user"].refresh_token):
         response = requests.post(
-            f"{settings.API_URL}/auth/refresh",
+            f"{settings.API_URL}/api/auth/refresh",
             json={
                 "user_id": st.session_state["user"].id,
                 "refresh_token": st.session_state["user"].refresh_token
