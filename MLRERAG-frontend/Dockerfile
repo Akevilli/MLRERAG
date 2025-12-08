@@ -1,11 +1,18 @@
-FROM python:3.13.9-trixie
+FROM python:3.13.9-trixie AS builder
 
 WORKDIR /app
 
 COPY requirements.txt .
 
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --prefix=/install --no-cache-dir -r requirements.txt
+
+
+FROM python:3.13.9-slim-trixie AS final
+
+WORKDIR /app
+
+COPY --from=builder /install /usr/local
 
 COPY . .
 
-ENTRYPOINT ["streamlit", "run", "main.py"]
+CMD ["streamlit", "run", "main.py", "--server.port", "8501", "--server.enableCORS", "false"]
