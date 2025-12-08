@@ -16,7 +16,7 @@ from .repositories import *
 from .services import *
 from .services.graph import Graph
 from .core import settings, _logger
-
+from .services.metadata import TagsAndEntitiesExtractor
 
 if sys.platform == "win32":
     try:
@@ -72,13 +72,13 @@ def get_session() -> Generator[Session, Any, None]:
         _session.close()
 
 # metadata
-_yake_extractor = YAKE(top=7, window_size=2, deduplication_threshold=0.1, deduplication_algo="lev")
+_tags_and_entities_extractor = TagsAndEntitiesExtractor(llm=_grok_llm)
 
 # Downloaders
 _arxiv_downloader = ArxivDownloader()
 
 # Parsers
-_llama_parser = LlamaParser(_llama_parse, _yake_extractor)
+_llama_parser = LlamaParser(_llama_parse, _tags_and_entities_extractor)
 
 # Chunkers
 _semantic_base_chunker = SemanticChunker(

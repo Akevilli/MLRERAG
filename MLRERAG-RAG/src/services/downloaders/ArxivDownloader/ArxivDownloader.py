@@ -4,7 +4,7 @@ import arxiv
 
 from src.api.schemas import UploadSchema
 from ..BaseDownloader import Downloader
-from src.services.chunks import DocumentMetadata
+from src.shared.schemas import DocumentMetadata
 
 
 class ArxivDownloader(Downloader):

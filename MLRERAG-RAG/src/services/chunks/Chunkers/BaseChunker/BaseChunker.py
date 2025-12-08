@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 
-from src.services.parsers import Document
-from src.services.chunks import Chunk
+from src.shared.schemas import Document, Chunk
 
 
 class Chunker(ABC):
