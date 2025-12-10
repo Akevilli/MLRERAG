@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from src.services.chunks import Chunk, ChunkWithEmbedding
+from src.shared.schemas import Chunk, ChunkWithEmbedding
 
 
 class Embedder(ABC):

@@ -1,8 +1,7 @@
 from langchain_experimental.text_splitter import SemanticChunker
 
 from ..BaseChunker import Chunker
-from src.services.chunks import Chunk, ChunkMetadata
-from src.services.parsers import Document
+from src.shared.schemas import Document, ChunkMetadata, Chunk
 
 
 class SemanticBaseChunker(Chunker):
@@ -22,14 +21,8 @@ class SemanticBaseChunker(Chunker):
                 chunk = Chunk(
                     text=chunk_text,
                     chunk_metadata=ChunkMetadata(
-                        document_id=document.document_id,
-                        title=document.title,
-                        summary=document.summary,
-                        source_url=document.source_url,
-                        published_at=document.published_at,
-                        authors=document.authors,
-                        page=document.page,
-                        keywords=document.keywords
+                        **document.document_metadata.model_dump(),
+                        page=document.page
                     )
                 )
                 

@@ -58,8 +58,35 @@ rag_tool_description: |
     * published_at: str in ISO format - If user provide certain date or range of dates you can use this filed, this field 
     has iso format.
     * authors: list of str - If user provided name of authors you can use this field.
-    * keywords: list of str - stores keywords from paper in lower case, you must use this filed for each call, it's your
-    main tool for pre-semantic search filtering.
+    * domains: list[str] - Stores the primary ML/DL discipline of the document. This field is one of the main tools for 
+    high-level filtering. You must use this filed if you can extract domains from the user's query.
+    Predefined List: ["nlp", "cv", "ap" (audio processing), "rl", "tabular", "multimodal", "ts" (time series), "bio", "other"]
+    * tasks: list of str - Stores the specific machine learning tasks addressed by the document, based on the Hugging 
+    Face Hub taxonomy. This is the second main tool for detailed filtering. You must use this filed if you can identify 
+    tasks clearly by user's prompt.
+    Predefined List: "text classification", "token classification", "named entity recognition", "Youtubeing",
+    "fill mask", "summarization", "translation", "text generation",
+    "text to text generation", "zero-shot classification", "conversational",
+    "sentence similarity", "table question answering", "feature extraction",
+    "text ranking", "image classification", "image segmentation",
+    "object detection", "depth estimation", "image to image", "text to image",
+    "image to text", "video classification", "keypoint detection",
+    "zero-shot image classification", "zero-shot object detection",
+    "mask generation", "unconditional image generation", "image feature extraction",
+    "background removal", "video to video", "text to video",
+    "audio classification", "automatic speech recognition", "text to speech",
+    "audio to audio", "voice activity detection", "zero-shot audio classification",
+    "visual question answering", "document question answering",
+    "image text to text", "audio text to text", "visual document retrieval",
+    "text to 3d", "image to 3d", "tabular classification",
+    "tabular regression", "time series forecasting", "other".
+    * entities: list of str - A list of the most important key terms (concepts, algorithms, architectures) extracted 
+    from the document. The list is dynamic (not predefined).You must use this filed when user mentioned some entity in 
+    his message.
+    Rules: All entities must be normalized, lowercased, and strictly belong to the ML/DL technical sphere. 
+    They are selected based on their semantic importance and frequency.
+    Focus: Models ("transformer", "resnet", "diffusion model"), Architectures/Components ("attention mechanism", 
+    "encoder-decoder"), and Techniques/Methods ("fine-tuning", "prompt engineering", "data augmentation").
   | Operator | Meaning/Category |
   |:---|:---|
   | $eq | Equality (==) |
@@ -77,3 +104,10 @@ rag_tool_description: |
   | $and | Logical (and) |
   | $or | Logical (or) |
   template: {"<metadata_filed_name>": {"<operator>": "<value>"}, ...}
+
+tags_and_entities_extractor_prompt: |
+  You are tags and entities extractor from papers, your soul task is determine domains and tasks paper from pre determined
+  list of domains and tasks (for instance: if paper explores diffusion models - domains are "cv" and tasks are "image 
+  generation" or something like this one). Also you need to extract list of main entities, entities must be related with 
+  ML/DL sphere (for instance: transformer, RNN, embedding and so on). You must transform entities to normalized and 
+  lowercased form.
