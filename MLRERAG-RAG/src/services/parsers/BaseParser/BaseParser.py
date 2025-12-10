@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 
-from src.services.parsers.schemas import Document
-from src.services.chunks import DocumentMetadata
+from src.shared.schemas import DocumentMetadata, Document
 
 
 class Parser(ABC):

@@ -1,7 +1,7 @@
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 
-from src.services.chunks import Chunk, ChunkWithEmbedding
 from ..BaseEmbedder import Embedder
+from src.shared.schemas import Chunk, ChunkWithEmbedding
 
 
 class HuggingFaceEmbedder(Embedder):
