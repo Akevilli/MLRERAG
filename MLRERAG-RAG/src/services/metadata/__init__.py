@@ -1,1 +1,1 @@
-from .YAKE import YAKE
+from .TagsAndEntitiesExtractor import TagsAndEntitiesExtractor

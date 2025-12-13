@@ -1,12 +1,24 @@
-FROM python:3.13.9-trixie
+FROM python:3.13.9-trixie AS builder
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu \
-    && pip install --no-cache-dir sentence-transformers
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+
+RUN pip install --prefix=/install --no-cache-dir \
+    --extra-index-url https://download.pytorch.org/whl/cpu \
+    -r requirements.txt
+
+
+FROM python:3.13.9-slim-trixie AS final
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y libpq-dev gcc
+
+COPY --from=builder /install /usr/local
 
 COPY . .
 
-ENTRYPOINT ["fastapi", "run", "main.py"]
+ENV PYTHONPATH=/app
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
