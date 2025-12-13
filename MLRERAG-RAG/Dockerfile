@@ -4,9 +4,9 @@ WORKDIR /app
 
 COPY requirements.txt .
 
-RUN pip install --prefix=/install --no-cache-dir torch>=1.11.0 && \
-    pip install --prefix=/install --no-cache-dir -U sentence-transformers && \
-    pip install --prefix=/install --no-cache-dir -r requirements.txt
+RUN pip install --prefix=/install --no-cache-dir \
+    --extra-index-url https://download.pytorch.org/whl/cpu \
+    -r requirements.txt
 
 
 FROM python:3.13.9-slim-trixie AS final
