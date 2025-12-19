@@ -3,7 +3,7 @@ services:
   rag:
     build:
       context: ./MLRERAG-RAG
-    image: MLRERAG/rag
+    image: ghcr.io/akevilli/MLRERAG-rag:latest
     container_name: RAG-MLRERAG
     environment:
       POSTGRES_HOST: db
@@ -28,7 +28,7 @@ services:
   backend:
     build:
       context: ./MLRERAG-backend
-    image: MLRERAG/backend
+    image: ghcr.io/akevilli/MLRERAG-backend:latest
     container_name: backend-MLRERAG
     environment:
       POSTGRES_HOST: db
@@ -63,7 +63,7 @@ services:
   frontend:
     build:
       context: ./MLRERAG-frontend
-    image: MLRERAG/frontend
+    image: ghcr.io/akevilli/MLRERAG-frontend:latest
     container_name: frontend-MLRERAG
     environment:
       API_HOST: backend
