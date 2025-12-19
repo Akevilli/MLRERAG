@@ -1,5 +1,6 @@
-from typing import Literal, Any
 import yaml
+from logging import Logger
+from typing import Literal, Any
 
 from langchain_core.messages import ToolMessage, SystemMessage
 from langchain_core.tools import Tool
@@ -7,6 +8,7 @@ from langchain_xai import ChatXAI
 from langchain_postgres import PGVectorStore
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode
+from FlagEmbedding.inference.reranker.encoder_only.base import BaseReranker
 
 from .schemas import State
 
@@ -14,7 +16,9 @@ from .schemas import State
 class Graph:
     def __init__(self,
         llm: ChatXAI,
+        reranker: BaseReranker,
         vector_store: PGVectorStore,
+        logger: Logger
     ):
         try:
             with open("cache/prompts.yaml", "r") as f:
@@ -22,6 +26,8 @@ class Graph:
         except FileNotFoundError:
             raise FileNotFoundError("Error: prompts/rag_prompts.yaml not found.")
 
+        self.__reranker = reranker
+        self.__logger = logger
         self.__vector_store = vector_store
         self.__rag_tool = Tool.from_function(
             self._rag_tool,
@@ -55,9 +61,26 @@ class Graph:
 
     # Tools
     def _rag_tool(self, query: str, filters: dict[str, dict[str, Any]] | None = None):
-        retrieved_chunks = self.__vector_store.similarity_search(query, k=10, filter=filters)
-        result = "\n".join([chunk.page_content for chunk in retrieved_chunks])
-        return result
+        retrieved_chunks = self.__vector_store.similarity_search(query, k=100, filter=filters)
+
+        self.__logger.info(
+            f"{len(retrieved_chunks)} chunks were retrieved: \n" +
+            "\n\n".join([document.page_content for document in retrieved_chunks])
+        )
+
+        candidates = [(query, chunk.page_content) for chunk in retrieved_chunks]
+        candidates_with_score = [[*candidate, self.__reranker.compute_score(candidate)] for candidate in candidates]
+        sorted_candidates = sorted(candidates_with_score, key=lambda c: c[2], reverse=True)
+        chunks = [candidate[1] for candidate in sorted_candidates[:20]]
+
+        message = "\n\n".join(chunks)
+
+        self.__logger.info(
+            f"Selected chunks({len(chunks)}) after reranking: \n" +
+            message
+        )
+
+        return message
 
 
     # Nodes

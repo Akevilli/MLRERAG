@@ -20,7 +20,10 @@ class Settings(BaseSettings):
 
     # Models
     EMBEDDER_NAME: str
-    DEVICE: str
+    EMBEDDER_DEVICE: str
+
+    RERANKER_NAME: str
+    RERANKER_DEVICE: str
 
     # API_KEYS
     GROK_API_KEY: str
