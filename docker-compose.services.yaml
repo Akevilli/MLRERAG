@@ -2,7 +2,7 @@ services:
   db:
     build:
       context: ./third-party
-    image: ghcr.io/akevilli/MLRERAG-postgresql:pg_vector
+    image: ghcr.io/akevilli/mlrerag-postgresql:pg_vector
     container_name: postgres-MLRERAG
     environment:
       POSTGRES_PASSWORD: LxJd5ouMt%|HVGXL
