@@ -52,7 +52,7 @@ _reranker = FlagReranker(
 
 
 # PGVectorStore
-_pg_engine = PGEngine.from_connection_string(f"postgresql+psycopg://{settings.DATABASE_USER}:{settings.DATABASE_PASSWORD}@{settings.DATABASE_HOST}:{settings.DATABASE_PORT}/{settings.DATABASE_NAME}")
+_pg_engine = PGEngine.from_connection_string(settings.PGVECTOR_DATABASE_URI)
 _vector_store = PGVectorStore.create_sync(
     _pg_engine,
     table_name="chunks",

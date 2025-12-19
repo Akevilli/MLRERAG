@@ -1,0 +1,17 @@
+name: Build Docker images
+
+on:
+    push:
+        branches: [ "main" ]
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+            
+            - name: Build
+              run: docker compose -f docker-compose.services.yaml -f docker-compose.app.yaml --build
+               
