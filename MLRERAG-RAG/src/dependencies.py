@@ -10,6 +10,7 @@ from llama_cloud_services import LlamaParse
 from langchain_experimental.text_splitter import SemanticChunker
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
+from FlagEmbedding import FlagReranker
 
 from .database import SessionLocal
 from .repositories import *
@@ -17,6 +18,7 @@ from .services import *
 from .services.graph import Graph
 from .core import settings, _logger
 from .services.metadata import TagsAndEntitiesExtractor
+
 
 if sys.platform == "win32":
     try:
@@ -34,13 +36,18 @@ def get_logger() -> Logger:
 # Models
 _embedder = HuggingFaceEmbeddings(
     model_name=settings.EMBEDDER_NAME,
-    model_kwargs={'device': settings.DEVICE},
+    model_kwargs={'device': settings.EMBEDDER_DEVICE},
     encode_kwargs={'normalize_embeddings': True}
 )
 _llama_parse = LlamaParse(api_key=settings.LLAMA_PARSER_API_KEY, num_workers=1, verbose=False, language="en")
 _grok_llm = ChatXAI(
     api_key=settings.GROK_API_KEY,
     model=settings.GROK_MODEL
+)
+_reranker = FlagReranker(
+    model_name_or_path=settings.RERANKER_NAME,
+    use_gpu=True,
+    device_type=settings.RERANKER_DEVICE,
 )
 
 
@@ -102,6 +109,8 @@ def get_chunk_repository() -> ChunkRepository:
 # Graph
 _graph = Graph(
     llm=_grok_llm,
+    reranker=_reranker,
+    logger=_logger,
     vector_store=_vector_store,
 )
 
