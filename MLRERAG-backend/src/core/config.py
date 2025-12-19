@@ -3,15 +3,15 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file="../.env",
         env_file_encoding="utf-8",
         extra="ignore"
     )
 
     POSTGRES_HOST: str
     POSTGRES_PORT: str
-    POSTGRES_USER: str
-    POSTGRES_PASSWORD: str
+    POSTGRES_USER_BACKEND: str
+    POSTGRES_PASSWORD_BACKEND: str
     POSTGRES_DATABASE: str
 
     ACTIVATION_TOKEN_LENGTH: int
@@ -39,7 +39,7 @@ class Settings(BaseSettings):
 
     @property
     def SQLALCHEMY_DATABASE_URI(self):
-        return (f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@"
+        return (f"postgresql+psycopg2://{self.POSTGRES_USER_BACKEND}:{self.POSTGRES_PASSWORD_BACKEND}@"
                 f"{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DATABASE}")
 
     @property

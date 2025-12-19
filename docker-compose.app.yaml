@@ -5,11 +5,19 @@ services:
       context: ./MLRERAG-RAG
     image: MLRERAG/rag
     container_name: RAG-MLRERAG
-    env_file:
-      - ./MLRERAG-RAG/.env
     environment:
-      DATABASE_HOST: db
-      DATABASE_PORT: 5432
+      POSTGRES_HOST: db
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_USER_RAG: ${POSTGRES_USER_RAG}
+      POSTGRES_PASSWORD_RAG: ${POSTGRES_PASSWORD_RAG}
+      POSTGRES_DATABASE: ${POSTGRES_DATABASE}
+      LLAMA_PARSER_API_KEY: ${LLAMA_PARSER_API_KEY}
+      EMBEDDER_NAME: ${EMBEDDER_NAME}
+      EMBEDDER_DEVICE: ${EMBEDDER_DEVICE}
+      RERANKER_NAME: ${RERANKER_NAME}
+      RERANKER_DEVICE: ${RERANKER_DEVICE}
+      GROK_API_KEY: ${GROK_API_KEY}
+      GROK_MODEL: ${GROK_MODEL}
     ports: 
       - 8001:8001
     networks:
@@ -22,15 +30,28 @@ services:
       context: ./MLRERAG-backend
     image: MLRERAG/backend
     container_name: backend-MLRERAG
-    env_file:
-      - ./MLRERAG-backend/.env
     environment:
       POSTGRES_HOST: db
-      POSTGRES_PORT: 5432
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_USER_BACKEND: ${POSTGRES_USER_BACKEND}
+      POSTGRES_PASSWORD_BACKEND: ${POSTGRES_PASSWORD_BACKEND}
+      POSTGRES_DATABASE: ${POSTGRES_DATABASE}
+      ACTIVATION_TOKEN_LENGTH: ${ACTIVATION_TOKEN_LENGTH}
+      REFRESH_TOKEN_LIFETIME_DAYS: ${REFRESH_TOKEN_LIFETIME_DAYS}
+      JWT_LIFETIME_MIN: ${JWT_LIFETIME_MIN}
+      JWT_ISSUER: ${JWT_ISSUER}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ALGORITHM: ${JWT_ALGORITHM}
+      SMTP_EMAIL: ${SMTP_EMAIL}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
       RAG_SERVICE_HOST: rag
-      RAG_SERVICE_PORT: 8001
+      RAG_SERVICE_PORT: ${RAG_SERVICE_PORT}
+      CONTEXT_WINDOW: ${CONTEXT_WINDOW}
       REDIS_HOST: redis
-      REDIS_PORT: 6379
+      REDIS_PORT: ${REDIS_PORT}
+      REDIS_TTL: ${REDIS_TTL}
     ports: 
       - 8000:8000
     networks:
@@ -44,11 +65,9 @@ services:
       context: ./MLRERAG-frontend
     image: MLRERAG/frontend
     container_name: frontend-MLRERAG
-    env_file:
-      - ./MLRERAG-frontend/.env
     environment:
       API_HOST: backend
-      API_PORT: 8000
+      API_PORT: ${API_PORT}
     ports: 
       - 8501:8501
     networks:
