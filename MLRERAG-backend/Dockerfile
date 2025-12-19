@@ -11,6 +11,8 @@ FROM python:3.13.9-slim-trixie AS final
 
 WORKDIR /app
 
+RUN apt-get update && apt-get install -y libpq-dev gcc
+
 COPY --from=builder /install /usr/local
 
 COPY . .
