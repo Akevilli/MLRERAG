@@ -1,1 +1,2 @@
-from .arxive_downloader import ArxivDownloader
+from .ArxivDownloader import ArxivDownloader
+from .BaseDownloader import Downloader

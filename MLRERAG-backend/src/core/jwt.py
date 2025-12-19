@@ -1,15 +1,15 @@
 import jwt
-from fastapi.security import OAuth2PasswordBearer
-from fastapi import status, HTTPException
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Depends, HTTPException, status
 
 from .config import settings
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+security = HTTPBearer()
 
-def decode_jwt(token: str) -> dict:
+def get_user_payload(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=settings.ALGORITHM)
+        payload = jwt.decode(credentials.credentials, settings.JWT_SECRET_KEY, algorithms=settings.JWT_ALGORITHM)
         return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(

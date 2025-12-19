@@ -5,12 +5,16 @@ from src.core import ErrorHandler
 from src.dependencies import get_logger
 
 
-app = FastAPI()
+app = FastAPI(
+    openapi_extra={
+        "security": [
+            {
+                "HTTPBearer": [] # <--- Changed from OAuth2PasswordBearer
+            }
+        ]
+    }
+)
 
 app.include_router(main_router)
 
 ErrorHandler(app, get_logger())
-
-@app.get("/{prompt}")
-def read_root(prompt: str):
-    return {"Hello": f"World, {prompt}"}

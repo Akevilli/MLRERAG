@@ -1,0 +1,83 @@
+services:
+
+  rag:
+    build:
+      context: ./MLRERAG-RAG
+    image: ghcr.io/akevilli/MLRERAG-rag:latest
+    container_name: RAG-MLRERAG
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_USER_RAG: ${POSTGRES_USER_RAG}
+      POSTGRES_PASSWORD_RAG: ${POSTGRES_PASSWORD_RAG}
+      POSTGRES_DATABASE: ${POSTGRES_DATABASE}
+      LLAMA_PARSER_API_KEY: ${LLAMA_PARSER_API_KEY}
+      EMBEDDER_NAME: ${EMBEDDER_NAME}
+      EMBEDDER_DEVICE: ${EMBEDDER_DEVICE}
+      RERANKER_NAME: ${RERANKER_NAME}
+      RERANKER_DEVICE: ${RERANKER_DEVICE}
+      GROK_API_KEY: ${GROK_API_KEY}
+      GROK_MODEL: ${GROK_MODEL}
+    ports: 
+      - 8001:8001
+    networks:
+      - MLRERAG_network
+    depends_on:
+      - db
+  
+  backend:
+    build:
+      context: ./MLRERAG-backend
+    image: ghcr.io/akevilli/MLRERAG-backend:latest
+    container_name: backend-MLRERAG
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_USER_BACKEND: ${POSTGRES_USER_BACKEND}
+      POSTGRES_PASSWORD_BACKEND: ${POSTGRES_PASSWORD_BACKEND}
+      POSTGRES_DATABASE: ${POSTGRES_DATABASE}
+      ACTIVATION_TOKEN_LENGTH: ${ACTIVATION_TOKEN_LENGTH}
+      REFRESH_TOKEN_LIFETIME_DAYS: ${REFRESH_TOKEN_LIFETIME_DAYS}
+      JWT_LIFETIME_MIN: ${JWT_LIFETIME_MIN}
+      JWT_ISSUER: ${JWT_ISSUER}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ALGORITHM: ${JWT_ALGORITHM}
+      SMTP_EMAIL: ${SMTP_EMAIL}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      RAG_SERVICE_HOST: rag
+      RAG_SERVICE_PORT: ${RAG_SERVICE_PORT}
+      CONTEXT_WINDOW: ${CONTEXT_WINDOW}
+      REDIS_HOST: redis
+      REDIS_PORT: ${REDIS_PORT}
+      REDIS_TTL: ${REDIS_TTL}
+    ports: 
+      - 8000:8000
+    networks:
+      - MLRERAG_network
+    depends_on:
+      - rag
+      - redis
+  
+  frontend:
+    build:
+      context: ./MLRERAG-frontend
+    image: ghcr.io/akevilli/MLRERAG-frontend:latest
+    container_name: frontend-MLRERAG
+    environment:
+      API_HOST: backend
+      API_PORT: ${API_PORT}
+    ports: 
+      - 8501:8501
+    networks:
+      - MLRERAG_network
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+
+networks:
+  MLRERAG_network:
+    driver: bridge

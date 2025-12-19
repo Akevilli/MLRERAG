@@ -2,6 +2,8 @@ import streamlit as st
 from handlers import registration_handler
 
 
+st.set_page_config(page_title="Registration")
+
 st.header("Registration")
 
 with st.form("registration_form"):
@@ -16,6 +18,11 @@ with st.form("registration_form"):
         use_container_width=True
     )
 
+with st.container(horizontal=True):
+    st.text("Already have an account?")
+    st.page_link(page="pages/1_login.py", label="Login")
+
+
 if "registration_success" in st.session_state and st.session_state["registration_success"]:
     del st.session_state["registration_success"]
     del st.session_state["registration_form_username"]
@@ -23,4 +30,4 @@ if "registration_success" in st.session_state and st.session_state["registration
     del st.session_state["registration_form_password"]
     del st.session_state["registration_form_confirm_password"]
 
-    st.switch_page("pages/1_login.py")
+    st.switch_page("pages/2_activation.py")

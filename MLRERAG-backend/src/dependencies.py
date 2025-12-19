@@ -4,19 +4,30 @@ from typing import Generator, Any
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
+from redis import Redis
 
 from .database import SessionLocal
+from .redis import pool
 from .repositories import (
     RefreshTokenRepository,
-    UserRepository
+    UserRepository,
+    ChatRepository,
+    MessageRepository
 )
 from .services import (
     AuthService,
     UserService,
     EmailService,
-    TokenService
+    TokenService,
+    ChatService,
+    MessageService,
+    RAGService,
+    RedisService
 )
 
+
+# Redis store
+_redis = Redis(decode_responses=True).from_pool(pool)
 
 # DB
 _session = SessionLocal()
@@ -29,12 +40,18 @@ _logger.addHandler(logging.FileHandler("app.log", mode="a"))
 # Repositories
 _refresh_token_repository = RefreshTokenRepository()
 _user_repository = UserRepository()
+_chat_repository = ChatRepository()
+_message_repository = MessageRepository()
 
 # Services
+_redis_service = RedisService(_redis)
 _user_service = UserService(_user_repository)
 _email_service = EmailService()
 _token_service = TokenService(_refresh_token_repository)
 _auth_service = AuthService(_user_service, _email_service, _token_service)
+_chat_service = ChatService(_chat_repository)
+_message_service = MessageService(_message_repository, _chat_service)
+_rag_service = RAGService(_chat_service, _message_service, _redis_service)
 
 
 def get_session() -> Generator[Session, Any, None]:
@@ -50,7 +67,7 @@ def get_session() -> Generator[Session, Any, None]:
         _session.close()
 
 
-def  get_user_service() -> UserService:
+def get_user_service() -> UserService:
     return _user_service
 
 def get_email_service() -> EmailService:
@@ -65,5 +82,13 @@ def get_auth_service() -> AuthService:
 def get_logger() -> Logger:
     return _logger
 
+def get_chat_service() -> ChatService:
+    return _chat_service
+
+def get_message_service() -> MessageService:
+    return _message_service
+
+def get_rag_service() -> RAGService:
+    return _rag_service
 
 
