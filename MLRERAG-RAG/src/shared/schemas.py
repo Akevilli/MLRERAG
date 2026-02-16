@@ -1,4 +1,4 @@
-from typing import List, Literal
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel
 
@@ -11,15 +11,15 @@ class UploadedPaperDTO(BaseModel):
     id_list: List[str]
 
 
-class DocumentMetadata(BaseModel):
-    document_id: str
+class Metadata(BaseModel):
+    paper_id: str
     title: str
     summary: str
     source_url: str
     published_at: str
     authors: List[str]
-    domains: List[Literal["nlp", "cv", "ap", "rl", "tabular", "multimodal", "ts", "bio", "other"]] = []
-    tasks: List[Literal[
+    domains: Optional[List[Literal["nlp", "cv", "ap", "rl", "tabular", "multimodal", "ts", "bio", "other"]]] = None
+    tasks: Optional[List[Literal[
         "text classification", "token classification", "named entity recognition", "Youtubeing",
         "fill mask", "summarization", "translation", "text generation",
         "text to text generation", "zero-shot classification", "conversational",
@@ -36,17 +36,17 @@ class DocumentMetadata(BaseModel):
         "image text to text", "audio text to text", "visual document retrieval",
         "text to 3d", "image to 3d", "tabular classification",
         "tabular regression", "time series forecasting", "other"
-    ]] = []
-    entities: List[str] = []
+    ]]] = None
+    entities: Optional[List[str]] = None
 
 
 class Document(BaseModel):
     text: str
     page: int
-    document_metadata: DocumentMetadata
+    document_metadata: Metadata
 
 
-class ChunkMetadata(DocumentMetadata):
+class ChunkMetadata(Metadata):
     page: int
 
 
@@ -57,3 +57,9 @@ class Chunk(BaseModel):
 
 class ChunkWithEmbedding(Chunk):
     embedding: List[float]
+
+
+class PaperIngestionDTO(BaseModel):
+    document_metadata: Optional[List[Metadata]] = None
+    documents: Optional[List[Document]] = None
+    chunks: Optional[List[Chunk]] = None
