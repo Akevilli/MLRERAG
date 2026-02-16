@@ -3,6 +3,9 @@ from typing import List, Literal
 from pydantic import BaseModel
 
 
+class PaperUploadDTO(BaseModel):
+    id_list: List[str]
+
 class DocumentMetadata(BaseModel):
     document_id: str
     title: str
