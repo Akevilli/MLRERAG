@@ -13,4 +13,4 @@ class PaperUploadRequest(BaseModel):
 
 
 class PaperUploadResponse(BaseModel):
-    saved_documents: List[str]
+    id_list: List[str]

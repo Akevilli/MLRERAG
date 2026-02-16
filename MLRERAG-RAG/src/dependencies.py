@@ -78,6 +78,13 @@ def get_session() -> Generator[Session, Any, None]:
     finally:
         _session.close()
 
+# Uploading
+
+_uploading_orchestrator = PaperIngestionService()
+
+def get_uploading_orchestrator() -> PaperIngestionService:
+    return _uploading_orchestrator
+
 # metadata
 _tags_and_entities_extractor = TagsAndEntitiesExtractor(llm=_grok_llm)
 

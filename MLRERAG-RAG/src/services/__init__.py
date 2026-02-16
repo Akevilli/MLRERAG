@@ -5,3 +5,4 @@ from .embedders import Embedder, HuggingFaceEmbedder
 from .chunks import ChunkService
 from .rag import RAGService
 from .metadata import TagsAndEntitiesExtractor
+from .uploading import *
