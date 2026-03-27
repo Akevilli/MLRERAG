@@ -3,6 +3,8 @@ import asyncio
 from typing import Generator, Any
 from logging import Logger
 
+import arxiv
+import httpx
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_xai import ChatXAI
 from langchain_postgres import PGVectorStore, PGEngine
@@ -32,6 +34,13 @@ if sys.platform == "win32":
 def get_logger() -> Logger:
     return _logger
 
+# Clients
+_arxiv_client = arxiv.Client()
+_httpx_client = httpx.AsyncClient()
+
+
+# arXiv
+_arxiv_provider = ArxivProvider(arxiv_client=_arxiv_client, httpx_client=_httpx_client)
 
 # Models
 _embedder = HuggingFaceEmbeddings(

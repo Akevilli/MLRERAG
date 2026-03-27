@@ -1,6 +1,6 @@
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class PaperUploadDTO(BaseModel):
@@ -9,6 +9,15 @@ class PaperUploadDTO(BaseModel):
 
 class UploadedPaperDTO(BaseModel):
     id_list: List[str]
+
+
+class ArxivMetadata(BaseModel):
+    arxiv_id: str = Field(description="arXiv identifier with paper version.")
+    title: str = Field(description="Paper title.")
+    summary: str = Field(description="Paper summary.")
+    source_url: str = Field(description="Paper's source URL.")
+    authors: List[str] = Field(description="List of authors.")
+
 
 
 class Metadata(BaseModel):
