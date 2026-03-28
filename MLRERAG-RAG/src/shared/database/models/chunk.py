@@ -9,7 +9,7 @@ from .base import Base
 
 
 class Chunk(Base):
-    __tablename__ = 'chunks'
+    __tablename__ = "chunks"
 
     id: Mapped[UUID] = mapped_column(
         UUID(as_uuid=True),

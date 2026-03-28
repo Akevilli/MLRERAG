@@ -1,5 +1,5 @@
-from src.models import Base
-from src.database import engine
+from src.shared.database import Base
+from src.shared.database import engine
 
 
 Base.metadata.drop_all(engine)

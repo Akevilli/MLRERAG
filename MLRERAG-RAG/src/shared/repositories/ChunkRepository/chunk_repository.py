@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..BaseRepository import BaseRepository
-from ...models import Chunk
+from src.shared.database import Chunk
 
 
 class ChunkRepository(BaseRepository):

@@ -31,7 +31,7 @@ class Settings(BaseSettings):
 
     @property
     def SQLALCHEMY_DATABASE_URI(self):
-        return (f"postgresql+psycopg2://{self.DATABASE_USER}:{self.DATABASE_PASSWORD}@"
+        return (f"postgresql+psycopg://{self.DATABASE_USER}:{self.DATABASE_PASSWORD}@"
                 f"{self.DATABASE_HOST}:{self.DATABASE_PORT}/{self.DATABASE_NAME}")
 
 
