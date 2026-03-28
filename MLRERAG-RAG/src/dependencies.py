@@ -12,8 +12,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from FlagEmbedding import FlagReranker
 
-from .database import SessionLocal
-from .repositories import *
+from src.shared.database import SessionLocal
+from src.shared.repositories import *
 from .services import *
 from .services.graph import Graph
 from .core import settings, _logger

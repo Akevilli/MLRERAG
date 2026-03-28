@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
-from src.models import Chunk
-from src.repositories import ChunkRepository
+from src.shared.database import Chunk
+from src.shared.repositories import ChunkRepository
 from src.shared.schemas import ChunkWithEmbedding
 
 
