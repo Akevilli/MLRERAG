@@ -19,7 +19,6 @@ class ArxivMetadata(BaseModel):
     authors: List[str] = Field(description="List of authors.")
 
 
-
 class Metadata(BaseModel):
     paper_id: str
     title: str
