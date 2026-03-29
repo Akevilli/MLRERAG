@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict
 
 class PaperRecordBaseDTO(BaseModel):
     arxiv_id: str
-    version: int
+    version: str
 
 
 class PaperRecordReadDTO(PaperRecordBaseDTO):

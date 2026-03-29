@@ -19,7 +19,7 @@ class Paper(Base):
         init=False
     )
     arxiv_id: Mapped[str] = mapped_column(nullable=False)
-    version: Mapped[int] = mapped_column(nullable=False)
+    version: Mapped[str] = mapped_column(nullable=False)
     load_status: Mapped[Literal["in_progress", "completed"]] = mapped_column(nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
