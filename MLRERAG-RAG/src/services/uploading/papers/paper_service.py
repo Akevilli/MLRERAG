@@ -20,3 +20,7 @@ class PaperService:
         unloaded_paper_ids = {reserved_paper.arxiv_id for reserved_paper in reserved_papers}
 
         return [paper for paper in papers_metadata if paper.arxiv_id in unloaded_paper_ids]
+
+    async def delete_papers(self, paper_ids: List[str]):
+        for paper_id in paper_ids:
+            await self._paper_repository.delete_by_arxiv_id(paper_id)

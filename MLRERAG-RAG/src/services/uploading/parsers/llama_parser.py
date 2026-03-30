@@ -2,7 +2,7 @@ import nest_asyncio
 
 from llama_cloud_services import LlamaParse
 
-from ..BaseParser.BaseParser import Parser
+from src.services.uploading.parsers.base_parser import Parser
 from src.services.metadata import TagsAndEntitiesExtractor
 from src.shared.schemas import DocumentMetadata, Document
 

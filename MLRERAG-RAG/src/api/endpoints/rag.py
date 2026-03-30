@@ -13,13 +13,13 @@ router = APIRouter()
 @router.put(
     "/upload",
     status_code=status.HTTP_201_CREATED,
-    response_model=PaperUploadResponse
+    # response_model=PaperUploadResponse
 )
-def upload(
+async def upload(
     upload_data: PaperUploadRequest,
     _rag_service: PaperIngestionService = Depends(get_uploading_orchestrator),
 ):
-    uploaded_documents = _rag_service.process(upload_data.to_dto())
+    uploaded_documents = await _rag_service.process(upload_data.to_dto())
 
     return uploaded_documents
 

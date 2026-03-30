@@ -1,7 +1,7 @@
 from typing import Optional, List
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -62,7 +62,6 @@ class PaperRepository:
 
         result = await self._session.execute(stmt)
         reserved_papers = list(result.scalars().all())
-
         await self._session.commit()
 
         return reserved_papers
@@ -115,4 +114,15 @@ class PaperRepository:
             None
         """
         await self._session.delete(entity)
+
+    async def delete_by_arxiv_id(self, arxiv_id: str) -> None:
+        """Remove a paper record from the database by its arxiv_id value.
+        Args:
+            arxiv_id: An arxiv_id string to search for.
+
+        Returns:
+            None
+        """
+        stmt = delete(Paper).where(Paper.arxiv_id==arxiv_id)
+        await self._session.execute(stmt)
 
