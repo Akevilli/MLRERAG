@@ -4,22 +4,58 @@ from pydantic import BaseModel, Field
 
 
 class PaperUploadDTO(BaseModel):
+    """Data transfer object for paper upload requests."""
     id_list: List[str]
 
 
 class UploadedPaperDTO(BaseModel):
+    """Data transfer object for uploaded paper responses."""
     id_list: List[str]
 
 
 class ArxivMetadata(BaseModel):
-    arxiv_id: str = Field(description="arXiv identifier with paper version.")
+    """Metadata model for arXiv paper information."""
+    arxiv_id: str = Field(description="arXiv's paper identifier")
+    version: str = Field(description="arXiv's paper version")
     title: str = Field(description="Paper title.")
     summary: str = Field(description="Paper summary.")
     source_url: str = Field(description="Paper's source URL.")
     authors: List[str] = Field(description="List of authors.")
 
 
+class Paragraph(BaseModel):
+    """Model representing a paragraph within a paper section."""
+    text: str = Field(description="Paper text.")
+    page: str = Field(description="Paper page number.")
+
+class Section(BaseModel):
+    """Model representing a document section with its content."""
+    number: str = Field(description="Section number.")
+    title: str = Field(description="Section title.")
+    page: str = Field(description="Section page.")
+    paragraphs: List[Paragraph] = Field(description="Section paragraphs.")
+
+class Table(BaseModel):
+    """Model representing a table extracted from a paper."""
+    caption: str = Field(description="Table caption.")
+    text: str = Field(description="Table text.")
+    description: str = Field(description="Table description.")
+    page: str = Field(description="Table page number.")
+
+class Reference(BaseModel):
+    """Model representing a bibliography reference."""
+    link: str = Field(description="Reference link.")
+
+class ArxivPaper(BaseModel):
+    """Model representing a parsed arXiv paper with structured content."""
+    sections: List[Section] = Field(description="List of sections.")
+    tables: List[Table] = Field(description="List of tables.")
+    references: List[Reference] = Field(description="List of references.")
+    metadata: ArxivMetadata = Field(description="Arxiv metadata.")
+
+
 class Metadata(BaseModel):
+    """Rich metadata model for documents with ML-related tags and entities."""
     paper_id: str
     title: str
     summary: str
@@ -49,25 +85,30 @@ class Metadata(BaseModel):
 
 
 class Document(BaseModel):
+    """Model representing a document page with text and metadata."""
     text: str
     page: int
     document_metadata: Metadata
 
 
 class ChunkMetadata(Metadata):
+    """Metadata extension for text chunks with page information."""
     page: int
 
 
 class Chunk(BaseModel):
+    """Model representing a text chunk for embedding and retrieval."""
     text: str
     chunk_metadata: ChunkMetadata
 
 
 class ChunkWithEmbedding(Chunk):
+    """Chunk model with an associated embedding vector."""
     embedding: List[float]
 
 
 class PaperIngestionDTO(BaseModel):
+    """Data transfer object for paper ingestion pipeline results."""
     document_metadata: Optional[List[Metadata]] = None
     documents: Optional[List[Document]] = None
     chunks: Optional[List[Chunk]] = None

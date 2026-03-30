@@ -23,6 +23,14 @@ services:
       - MLRERAG_network
     volumes:
       - redis_data:/data
+  
+  grobid:
+    image: grobid/grobid:0.8.2.1-crf
+    container_name: grobid-MLRERAG
+    ports:
+      - 8070:8070
+    networks:
+      - MLRERAG_network
 
 volumes:
   postgres_data:
