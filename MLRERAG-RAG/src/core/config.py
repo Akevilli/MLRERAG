@@ -9,6 +9,8 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
+    BATCH_SIZE: int
+
     # Llama
     LLAMA_PARSER_API_KEY: str
 
@@ -26,6 +28,9 @@ class Settings(BaseSettings):
     # Models
     EMBEDDER_NAME: str
     EMBEDDER_DEVICE: str
+
+    TAGGER_MODEL: str
+    TAGGER_API_KEY: str
 
     RERANKER_NAME: str
     RERANKER_DEVICE: str

@@ -1,10 +1,11 @@
 import sys
 import asyncio
-from typing import AsyncGenerator, Any
+from typing import AsyncGenerator, Any, Optional
 from logging import Logger
 
 import arxiv
 import httpx
+import instructor
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -51,10 +52,10 @@ _arxiv_provider = ArxivProvider(arxiv_client=_arxiv_client, httpx_client=_httpx_
 #     encode_kwargs={'normalize_embeddings': True}
 # )
 # _llama_parse = LlamaParse(api_key=settings.LLAMA_PARSER_API_KEY, num_workers=1, verbose=False, language="en")
-# _grok_llm = ChatXAI(
-#     api_key=settings.GROK_API_KEY,
-#     model=settings.GROK_MODEL
-# )
+_grok_llm = ChatXAI(
+    api_key=settings.GROK_API_KEY,
+    model=settings.GROK_MODEL
+)
 # _reranker = FlagReranker(
 #     model_name_or_path=settings.RERANKER_NAME,
 #     use_gpu=True,
@@ -103,15 +104,38 @@ def get_grobid_parser() -> GrobidParser:
         grobid_port=settings.GROBID_PORT
     )
 
+
+# parsers
+_tagger_llm: Optional[LLMTagger] = None
+
+async def _get_llm_tagger() -> LLMTagger:
+    global _tagger_llm
+
+    if _tagger_llm is None:
+        instructor_client = instructor.from_provider(
+            model=settings.TAGGER_MODEL,
+            api_key=settings.TAGGER_API_KEY,
+            async_client=True,
+            mode=instructor.Mode.XAI_JSON
+        )
+
+        _tagger_llm = LLMTagger(instructor_client)
+
+    return _tagger_llm
+
+
 # Uploading
 def get_uploading_orchestrator(
         paper_service: PaperService = Depends(get_paper_service),
         grobid_parser: GrobidParser = Depends(get_grobid_parser),
+        llm_tagger: LLMTagger = Depends(_get_llm_tagger),
 ) -> PaperIngestionService:
     return PaperIngestionService(
         arxiv_provider=_arxiv_provider,
         paper_service=paper_service,
         parser=grobid_parser,
+        tagger=llm_tagger,
+        batch_size=settings.BATCH_SIZE,
     )
 
 

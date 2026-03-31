@@ -1,3 +1,4 @@
+import asyncio
 from typing import List, Tuple
 
 from bs4 import BeautifulSoup, Tag
@@ -45,23 +46,13 @@ class GrobidParser(Parser):
         Returns:
             List[ArxivPaper]: A list of objects containing structured sections, tables, and references.
         """
-        results = []
+        tasks = [self._parse_single(metadata, paper_bytes) for metadata, paper_bytes in unloaded_papers]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        valid_results = [result for result in results if isinstance(result, ArxivPaper)]
 
-        for metadata, paper_bytes in unloaded_papers:
-            xml_content = await self._get_xml(metadata, paper_bytes)
-            soup = BeautifulSoup(xml_content, "lxml-xml")
+        return valid_results
 
-            paper = ArxivPaper(
-                sections=self._get_sections(soup),
-                tables=self._get_tables(soup),
-                references=self._get_references(soup),
-                metadata=metadata,
-            )
-            results.append(paper)
-
-        return results
-
-    async def _get_xml(self, arxiv_metadata: ArxivMetadata, content: bytes) -> bytes:
+    async def _parse_single(self, arxiv_metadata: ArxivMetadata, content: bytes) -> ArxivPaper:
         """
         Sends PDF content to GROBID API and retrieves the TEI XML response.
 
@@ -92,7 +83,16 @@ class GrobidParser(Parser):
                 detail=f"Grobid request failed for {arxiv_metadata.arxiv_id}: {str(e)}"
             )
 
-        return response.content
+        soup = BeautifulSoup(response.content, "lxml-xml")
+
+        paper = ArxivPaper(
+            sections=self._get_sections(soup),
+            tables=self._get_tables(soup),
+            references=self._get_references(soup),
+            metadata=arxiv_metadata,
+        )
+
+        return paper
 
     def _get_page(self, tag: Tag) -> str:
         """
