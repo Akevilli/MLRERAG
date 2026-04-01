@@ -123,18 +123,27 @@ async def _get_llm_tagger() -> LLMTagger:
 
     return _tagger_llm
 
+# chunker
+def get_section_bound_chunker() -> SectionBoundChunker:
+    return SectionBoundChunker(
+        chunk_size=settings.CHUNK_SIZE,
+        overlap=settings.OVERLAP
+    )
+
 
 # Uploading
 def get_uploading_orchestrator(
         paper_service: PaperService = Depends(get_paper_service),
         grobid_parser: GrobidParser = Depends(get_grobid_parser),
         llm_tagger: LLMTagger = Depends(_get_llm_tagger),
+        section_bound_chunker: SectionBoundChunker = Depends(get_section_bound_chunker),
 ) -> PaperIngestionService:
     return PaperIngestionService(
         arxiv_provider=_arxiv_provider,
         paper_service=paper_service,
         parser=grobid_parser,
         tagger=llm_tagger,
+        chunker=section_bound_chunker,
         batch_size=settings.BATCH_SIZE,
     )
 

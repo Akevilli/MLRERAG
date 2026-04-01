@@ -4,6 +4,7 @@ from src.shared.schemas import (
 from .providers import Provider
 from .parsers import Parser
 from .taggers import Tagger
+from .chunkers import Chunker
 from .lib import get_batch
 from src.services.uploading.papers import PaperService
 
@@ -28,6 +29,7 @@ class PaperIngestionService:
             paper_service: PaperService,
             parser: Parser,
             tagger: Tagger,
+            chunker: Chunker,
             batch_size: int
     ):
         """Initializes the PaperIngestionService with required dependencies.
@@ -43,6 +45,7 @@ class PaperIngestionService:
         self._paper_service = paper_service
         self._parser = parser
         self._tagger = tagger
+        self._chunker = chunker
         self._batch_size = batch_size
 
     async def process(self, upload_dto: PaperUploadDTO):
@@ -71,7 +74,9 @@ class PaperIngestionService:
 
                 arxiv_papers = await self._parser.parse(current_batch)
                 tagged_arxiv_papers = await self._tagger.tag(arxiv_papers)
-                result.extend(tagged_arxiv_papers)
+                chunks = self._chunker.chunk(tagged_arxiv_papers)
+
+                result.extend(chunks)
 
             return result
         except:
