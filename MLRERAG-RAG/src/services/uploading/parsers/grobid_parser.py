@@ -15,6 +15,7 @@ from src.shared.schemas import (
     ArxivPaper
 )
 
+# TODO: Merge sections without number with the first previous section with number.
 
 class GrobidParser(Parser):
     """Parser implementation using GROBID service to extract structured data from PDF papers."""

@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     )
 
     BATCH_SIZE: int
+    CHUNK_SIZE: int
+    OVERLAP: int
 
     # Llama
     LLAMA_PARSER_API_KEY: str
