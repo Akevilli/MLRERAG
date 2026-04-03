@@ -9,6 +9,7 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
+    RAG_PORT: int
     BATCH_SIZE: int
     CHUNK_SIZE: int
     OVERLAP: int
@@ -37,6 +38,10 @@ class Settings(BaseSettings):
     EMBEDDER_BATCH_SIZE: int
     EMBEDDING_DIM: int
 
+    VECTOR_DB_HOST: str
+    VECTOR_DB_PORT: int
+    VECTOR_DB_COLLECTION: str
+
     TAGGER_MODEL: str
     TAGGER_API_KEY: str
 
@@ -49,7 +54,7 @@ class Settings(BaseSettings):
 
     @property
     def SQLALCHEMY_DATABASE_URI(self):
-        return (f"postgresql+psycopg://{self.POSTGRES_USER_RAG}:{self.POSTGRES_PASSWORD_RAG}@"
+        return (f"postgresql+asyncpg://{self.POSTGRES_USER_RAG}:{self.POSTGRES_PASSWORD_RAG}@"
                 f"{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DATABASE}")
 
 

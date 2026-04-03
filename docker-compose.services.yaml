@@ -46,11 +46,22 @@ services:
               capabilities: [gpu]
     volumes:
       - ollama_volume:/root/.ollama
+  
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant-MLRERAG
+    ports:
+      - 6333:6333
+    networks:
+      - MLRERAG_network
+    volumes:
+      - qdrant_data:/qdrant/storage
 
 volumes:
   postgres_data:
   redis_data:
   ollama_volume:
+  qdrant_data:
 
 networks:
   MLRERAG_network:

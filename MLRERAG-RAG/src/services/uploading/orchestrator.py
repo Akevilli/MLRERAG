@@ -2,16 +2,12 @@ from datetime import datetime
 
 from loguru import logger
 
-from src.shared.schemas import (
-    PaperUploadDTO
-)
+from src.shared import PaperUploadDTO, Embedder, QdrantRepository, get_batch
+from .papers import PaperService
 from .providers import Provider
 from .parsers import Parser
 from .taggers import Tagger
 from .chunkers import Chunker
-from src.services.uploading.papers import PaperService
-from src.shared.embedders import Embedder
-from src.shared.lib import get_batch
 
 
 class PaperIngestionService:
@@ -36,6 +32,7 @@ class PaperIngestionService:
             tagger: Tagger,
             chunker: Chunker,
             embedder: Embedder,
+            qdrant_repository: QdrantRepository,
             batch_size: int
     ):
         """Initializes the PaperIngestionService with required dependencies.
@@ -53,6 +50,7 @@ class PaperIngestionService:
         self._tagger = tagger
         self._chunker = chunker
         self._embedder = embedder
+        self._qdrant_repository = qdrant_repository
         self._batch_size = batch_size
 
     async def process(self, upload_dto: PaperUploadDTO):
@@ -64,55 +62,60 @@ class PaperIngestionService:
         Returns:
             List of ArxivPaperWithTags containing processed papers with tags.
         """
-        result = []
-        logger.debug(f"Processing paper(s) {upload_dto.id_list}.")
-        arxiv_metadata = await self._arxiv_provider.get_metadata(upload_dto.id_list)
-        unloaded_arxiv_metadata = await self._paper_service.register_papers(arxiv_metadata)
-        download_generator = self._arxiv_provider.download([paper.arxiv_id for paper in unloaded_arxiv_metadata])
-        arxiv_metadata_map = {metadata.arxiv_id: metadata for metadata in unloaded_arxiv_metadata}
+        try:
+            result = []
+            logger.debug(f"Processing paper(s) {upload_dto.id_list}.")
+            arxiv_metadata = await self._arxiv_provider.get_metadata(upload_dto.id_list)
+            unloaded_arxiv_metadata = await self._paper_service.register_papers(arxiv_metadata)
+            download_generator = self._arxiv_provider.download([paper.arxiv_id for paper in unloaded_arxiv_metadata])
+            arxiv_metadata_map = {metadata.arxiv_id: metadata for metadata in unloaded_arxiv_metadata}
 
-        await self._paper_service.delete_papers(upload_dto.id_list) # delete
+            await self._paper_service.delete_papers(upload_dto.id_list) # delete
 
-        logger.debug(f"Start downloading paper(s) {[metadata.arxiv_id for metadata in unloaded_arxiv_metadata]}.")
-        async for batch in get_batch(download_generator, self._batch_size):
-            if not batch:
-                continue
+            logger.debug(f"Start downloading paper(s) {[metadata.arxiv_id for metadata in unloaded_arxiv_metadata]}.")
+            async for batch in get_batch(download_generator, self._batch_size):
+                if not batch:
+                    continue
 
-            current_batch = []
+                current_batch = []
 
-            for paper_id, paper_bytes in batch:
-                current_batch.append((arxiv_metadata_map[paper_id], paper_bytes))
+                for paper_id, paper_bytes in batch:
+                    current_batch.append((arxiv_metadata_map[paper_id], paper_bytes))
 
-            parsing_start = datetime.now()
-            arxiv_papers = await self._parser.parse(current_batch)
-            parsing_end = datetime.now()
-            logger.debug(
-                f"Paper(s) {[arxiv_paper.metadata.arxiv_id for arxiv_paper in arxiv_papers]} wa(s/re) parsed. "
-                f"Total time: {(parsing_end - parsing_start).total_seconds()} seconds."
-            )
+                parsing_start = datetime.now()
+                arxiv_papers = await self._parser.parse(current_batch)
+                parsing_end = datetime.now()
+                logger.debug(
+                    f"Paper(s) {[arxiv_paper.metadata.arxiv_id for arxiv_paper in arxiv_papers]} wa(s/re) parsed. "
+                    f"Total time: {(parsing_end - parsing_start).total_seconds()} seconds."
+                )
 
-            tagging_start = datetime.now()
-            tagged_arxiv_papers = await self._tagger.tag(arxiv_papers)
-            tagging_end = datetime.now()
-            logger.debug(
-                f"Paper(s) {[arxiv_paper.metadata.arxiv_id for arxiv_paper in tagged_arxiv_papers]} wa(s/re) tagged. "
-                f"Total time: {(tagging_end - tagging_start).total_seconds()} seconds. "
-            )
+                tagging_start = datetime.now()
+                tagged_arxiv_papers = await self._tagger.tag(arxiv_papers)
+                tagging_end = datetime.now()
+                logger.debug(
+                    f"Paper(s) {[arxiv_paper.metadata.arxiv_id for arxiv_paper in tagged_arxiv_papers]} wa(s/re) tagged. "
+                    f"Total time: {(tagging_end - tagging_start).total_seconds()} seconds. "
+                )
 
-            chunks = self._chunker.chunk(tagged_arxiv_papers)
-            logger.debug(
-                f"Paper(s) {[arxiv_paper.metadata.arxiv_id for arxiv_paper in tagged_arxiv_papers]} wa(s/re) chunked. "
-                f"Total chunks: {len(chunks)}."
-            )
+                chunks = self._chunker.chunk(tagged_arxiv_papers)
+                logger.debug(
+                    f"Paper(s) {[arxiv_paper.metadata.arxiv_id for arxiv_paper in tagged_arxiv_papers]} wa(s/re) chunked. "
+                    f"Total chunks: {len(chunks)}."
+                )
 
-            embedding_start = datetime.now()
-            chunks_with_embeddings = await self._embedder.embed_document(chunks)
-            embedding_end = datetime.now()
-            logger.debug(
-                f"{len(chunks_with_embeddings)} chunks were embedded."
-                f"Total time: {(embedding_end - embedding_start).total_seconds()} seconds."
-            )
+                embedding_start = datetime.now()
+                chunks_with_embeddings = await self._embedder.embed_document(chunks)
+                embedding_end = datetime.now()
+                logger.debug(
+                    f"{len(chunks_with_embeddings)} chunks were embedded."
+                    f"Total time: {(embedding_end - embedding_start).total_seconds()} seconds."
+                )
 
-            result.extend(chunks_with_embeddings)
+                chunk_ids = await self._qdrant_repository.upload_chunks(chunks_with_embeddings)
+                result.extend(chunk_ids)
 
-        return result
+            return result
+        except Exception as e:
+            logger.error(e)
+            await self._paper_service.delete_papers(upload_dto.id_list)

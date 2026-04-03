@@ -59,7 +59,6 @@ class OllamQwenEmbedder(Embedder):
             corresponding embedding vectors.
         """
         request_texts = self._add_request([chunk.content for chunk in chunks], True)
-        logger.info(f"Request texts: {request_texts}")
         all_embeddings = []
 
         async with self._semaphore:
