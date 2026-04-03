@@ -91,10 +91,10 @@ class PaperTag(BaseModel):
                                           (e.g., 'ner', 'cnn', 'bert').""")
 
     def __str__(self) -> str:
-        """Returns the string representation of the hierarchical tag path.
+        """Returns the string representations of the hierarchical tag path.
 
         Returns:
-            str: The tag formatted as 'domain/category/entity'.
+            str: The string representation of the hierarchical tag path.
         """
         return f"{self.domain.value}/{self.category.value}/{self.entity}"
 

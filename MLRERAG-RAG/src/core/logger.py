@@ -21,9 +21,11 @@ class InterceptHandler(logging.Handler):
 
 def configure_logger():
     logger.remove()
-
-    logger.add(sys.stdout, colorize=True, format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>")
-
+    logger.add(
+        sys.stdout,
+        colorize=True,
+        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
+    )
     logger.add(".logs/app.log", rotation="10 MB", retention="10 days", compression="zip", encoding="utf-8", serialize=True)
 
     logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)

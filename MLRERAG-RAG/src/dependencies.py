@@ -1,7 +1,4 @@
-import sys
-import asyncio
-from typing import AsyncGenerator, Any, Optional
-from logging import Logger
+from typing import AsyncGenerator, Optional
 
 import arxiv
 import httpx
@@ -13,18 +10,9 @@ from langchain_xai import ChatXAI
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from src.shared.database import SessionLocal
-from src.shared.embedders import OllamQwenEmbedder
+from src.shared import SessionLocal, OllamQwenEmbedder, QdrantRepository, qdrant_client
 from .services import *
 from .core import settings
-
-
-if sys.platform == "win32":
-    try:
-        from asyncio import WindowsSelectorEventLoopPolicy
-        asyncio.set_event_loop_policy(WindowsSelectorEventLoopPolicy())
-    except ImportError:
-        print("WindowsSelectorEventLoopPolicy не найден, попробуйте другую версию Python/asyncio.")
 
 
 # Clients
@@ -32,6 +20,13 @@ _arxiv_client = arxiv.Client()
 _httpx_client = httpx.AsyncClient(headers={"User-Agent": "Mozilla/5.0"})
 _ollama_client = AsyncClient(
     host=f"{settings.OLLAMA_HOST}:{settings.OLLAMA_PORT}"
+)
+
+
+# Qdrant
+_qdrant_repository = QdrantRepository(
+    client=qdrant_client,
+    collection_name=settings.VECTOR_DB_COLLECTION
 )
 
 
@@ -122,5 +117,6 @@ def get_uploading_orchestrator(
         tagger=llm_tagger,
         chunker=section_bound_chunker,
         embedder=_ollama_embedder,
+        qdrant_repository=_qdrant_repository,
         batch_size=settings.BATCH_SIZE,
     )
