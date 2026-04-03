@@ -1,7 +1,6 @@
 from typing import List
 
-from src.shared.schemas import ArxivPaperWithTags
-from .schemas import Chunk, ChunkMetadata
+from src.shared.schemas import ArxivPaperWithTags, Chunk, ChunkMetadata
 from .base_chunker import Chunker
 
 

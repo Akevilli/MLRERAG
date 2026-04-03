@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     # Llama
     LLAMA_PARSER_API_KEY: str
 
+    # Ollama
+    OLLAMA_HOST: str
+    OLLAMA_PORT: int
+
     # Grobid
     GROBID_HOST: str
     GROBID_PORT: int
@@ -28,8 +32,10 @@ class Settings(BaseSettings):
     POSTGRES_DATABASE: str
 
     # Models
-    EMBEDDER_NAME: str
+    EMBEDDER_MODEL: str
     EMBEDDER_DEVICE: str
+    EMBEDDER_BATCH_SIZE: int
+    EMBEDDING_DIM: int
 
     TAGGER_MODEL: str
     TAGGER_API_KEY: str
