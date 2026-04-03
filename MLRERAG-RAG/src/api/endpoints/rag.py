@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, status
 
 from src.dependencies import get_uploading_orchestrator
@@ -19,9 +21,11 @@ async def upload(
     upload_data: PaperUploadRequest,
     _rag_service: PaperIngestionService = Depends(get_uploading_orchestrator),
 ):
+    start = datetime.now()
     uploaded_documents = await _rag_service.process(upload_data.to_dto())
+    end = datetime.now()
 
-    return uploaded_documents
+    return (end - start).total_seconds(), uploaded_documents
 
 
 # @router.post(

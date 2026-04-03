@@ -1,4 +1,4 @@
-from typing import List, Literal, Optional
+from typing import List, Sequence
 from enum import Enum
 
 from pydantic import BaseModel, Field
@@ -150,61 +150,35 @@ class ArxivPaperWithTags(ArxivPaper):
     tags: List[PaperTag] = Field(description="List of paper tags.")
 
 
-class Metadata(BaseModel):
-    """Rich metadata model for documents with ML-related tags and entities."""
-    paper_id: str
-    title: str
-    summary: str
-    source_url: str
-    published_at: str
-    authors: List[str]
-    domains: Optional[List[Literal["nlp", "cv", "ap", "rl", "tabular", "multimodal", "ts", "bio", "other"]]] = None
-    tasks: Optional[List[Literal[
-        "text classification", "token classification", "named entity recognition", "Youtubeing",
-        "fill mask", "summarization", "translation", "text generation",
-        "text to text generation", "zero-shot classification", "conversational",
-        "sentence similarity", "table question answering", "feature extraction",
-        "text ranking", "image classification", "image segmentation",
-        "object detection", "depth estimation", "image to image", "text to image",
-        "image to text", "video classification", "keypoint detection",
-        "zero-shot image classification", "zero-shot object detection",
-        "mask generation", "unconditional image generation", "image feature extraction",
-        "background removal", "video to video", "text to video",
-        "audio classification", "automatic speech recognition", "text to speech",
-        "audio to audio", "voice activity detection", "zero-shot audio classification",
-        "visual question answering", "document question answering",
-        "image text to text", "audio text to text", "visual document retrieval",
-        "text to 3d", "image to 3d", "tabular classification",
-        "tabular regression", "time series forecasting", "other"
-    ]]] = None
-    entities: Optional[List[str]] = None
+class ChunkMetadata(ArxivMetadata):
+    """Metadata associated with a paper chunk.
 
+    Extends ArxivMetadata with chunk-specific information including
+    tags, page location, and section name.
 
-class Document(BaseModel):
-    """Model representing a document page with text and metadata."""
-    text: str
-    page: int
-    document_metadata: Metadata
+    Attributes:
+        tags: List of paper tags associated with the chunk.
+        page: Page number where the chunk starts.
+        section_name: Name of the section containing the chunk.
+    """
 
-
-class ChunkMetadata(Metadata):
-    """Metadata extension for text chunks with page information."""
-    page: int
-
+    tags: List[PaperTag] = Field(description="List of paper tags.")
+    page: str = Field(description="Page where chunk starts.")
+    section_name: str = Field(description="Section where chunk locates.")
 
 class Chunk(BaseModel):
-    """Model representing a text chunk for embedding and retrieval."""
-    text: str
-    chunk_metadata: ChunkMetadata
+    """Schema representing a paper chunk for the uploading process.
 
+    A chunk is a segment of a paper's content with associated metadata,
+    used for downstream processing and storage.
+
+    Attributes:
+        content: The text content of the chunk.
+        metadata: Metadata describing the chunk's source and location.
+    """
+
+    content: str = Field(description="Chunk content.")
+    metadata: ChunkMetadata = Field(description="Chunk metadata.")
 
 class ChunkWithEmbedding(Chunk):
-    """Chunk model with an associated embedding vector."""
-    embedding: List[float]
-
-
-class PaperIngestionDTO(BaseModel):
-    """Data transfer object for paper ingestion pipeline results."""
-    document_metadata: Optional[List[Metadata]] = None
-    documents: Optional[List[Document]] = None
-    chunks: Optional[List[Chunk]] = None
+    embedding: Sequence[float] = Field(description="Chunk embedding.")

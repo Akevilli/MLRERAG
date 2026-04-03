@@ -1,8 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List
 
-from .schemas import Chunk
-from src.shared.schemas import ArxivPaperWithTags
+from src.shared.schemas import ArxivPaperWithTags, Chunk
 
 
 class Chunker(ABC):
