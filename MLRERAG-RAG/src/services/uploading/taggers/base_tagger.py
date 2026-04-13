@@ -1,7 +1,7 @@
 from typing import List
 from abc import ABC, abstractmethod
 
-from src.shared.schemas import ArxivPaper, ArxivPaperWithTags
+from src.shared.schemas import ArxivPaper, TaggedArxivPaper
 
 
 class Tagger(ABC):
@@ -12,7 +12,7 @@ class Tagger(ABC):
     """
 
     @abstractmethod
-    async def tag(self, papers: List[ArxivPaper]) -> List[ArxivPaperWithTags]:
+    async def tag(self, papers: List[ArxivPaper]) -> List[TaggedArxivPaper]:
         """Assigns tags to the provided papers.
 
         Args:

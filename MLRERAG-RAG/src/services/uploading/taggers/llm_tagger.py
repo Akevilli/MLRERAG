@@ -9,7 +9,7 @@ from .schemas import PaperTaggingResult
 from .lib import construct_user_prompt
 from src.shared.schemas import (
     ArxivPaper,
-    ArxivPaperWithTags,
+    TaggedArxivPaper,
 )
 
 
@@ -39,14 +39,14 @@ class LLMTagger(Tagger):
         with open("cache/prompts.yaml") as file:
             self._system_prompt = yaml.safe_load(file)["tagger_system_prompt"]
 
-    async def _tag_single(self, paper: ArxivPaper) -> ArxivPaperWithTags:
+    async def _tag_single(self, paper: ArxivPaper) -> TaggedArxivPaper:
         """Tags a single paper using the LLM.
 
         Args:
             paper: An ArxivPaper instance containing the paper metadata to tag.
 
         Returns:
-            An ArxivPaperWithTags instance containing the original paper data
+            An TaggedArxivPaper instance containing the original paper data
             along with the extracted tags.
         """
         response = await self._instructor_client.create(
@@ -57,9 +57,9 @@ class LLMTagger(Tagger):
             ]
         )
 
-        return ArxivPaperWithTags(**paper.model_dump(), tags=response.tags)
+        return TaggedArxivPaper(**paper.model_dump(), tags=response.tags)
 
-    async def tag(self, papers: List[ArxivPaper]) -> List[ArxivPaperWithTags]:
+    async def tag(self, papers: List[ArxivPaper]) -> List[TaggedArxivPaper]:
         """Tags multiple papers concurrently using the LLM.
 
         Args:

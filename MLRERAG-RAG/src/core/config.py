@@ -25,22 +25,28 @@ class Settings(BaseSettings):
     GROBID_HOST: str
     GROBID_PORT: int
 
-    # Database
+    # Databases
     POSTGRES_HOST: str
     POSTGRES_PORT: int
     POSTGRES_USER_RAG: str
     POSTGRES_PASSWORD_RAG: str
     POSTGRES_DATABASE: str
 
+    VECTOR_DB_HOST: str
+    VECTOR_DB_PORT: int
+    VECTOR_DB_COLLECTION: str
+
+    GRAPH_DB_HOST: str
+    GRAPH_DB_PORT: int
+    GRAPH_DB_USER: str
+    GRAPH_DB_PASSWORD: str
+    GRAPH_DB_DATABASE: str
+
     # Models
     EMBEDDER_MODEL: str
     EMBEDDER_DEVICE: str
     EMBEDDER_BATCH_SIZE: int
     EMBEDDING_DIM: int
-
-    VECTOR_DB_HOST: str
-    VECTOR_DB_PORT: int
-    VECTOR_DB_COLLECTION: str
 
     TAGGER_MODEL: str
     TAGGER_API_KEY: str
@@ -53,7 +59,7 @@ class Settings(BaseSettings):
     GROK_MODEL: str
 
     @property
-    def SQLALCHEMY_DATABASE_URI(self):
+    def SQLALCHEMY_DATABASE_URI(self) -> str:
         return (f"postgresql+asyncpg://{self.POSTGRES_USER_RAG}:{self.POSTGRES_PASSWORD_RAG}@"
                 f"{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DATABASE}")
 

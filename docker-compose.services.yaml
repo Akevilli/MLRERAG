@@ -56,11 +56,27 @@ services:
       - MLRERAG_network
     volumes:
       - qdrant_data:/qdrant/storage
+  
+  neo4j:
+    image: neo4j:trixie
+    container_name: neo4j-MLRERAG
+    ports:
+      - 7474:7474
+      - 7687:7687
+    environment:
+      - NEO4J_AUTH=neo4j/Xzu6[7tg.o9Y697u
+    networks:
+      - MLRERAG_network
+    volumes:
+      - neo4j_data:/neo4j/data:/data
+      - neo4j_plugins:/neo4j/plugins:/plugins
 
 volumes:
   postgres_data:
   redis_data:
   ollama_volume:
+  neo4j_data:
+  neo4j_plugins:
   qdrant_data:
 
 networks:

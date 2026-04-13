@@ -1,5 +1,6 @@
 import asyncio
-from typing import List, Tuple
+from uuid import uuid4
+from typing import List, Tuple, Dict
 
 from bs4 import BeautifulSoup, Tag
 from fastapi import HTTPException
@@ -49,6 +50,11 @@ class GrobidParser(Parser):
         """
         tasks = [self._parse_single(metadata, paper_bytes) for metadata, paper_bytes in unloaded_papers]
         results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        for result in results:
+            if isinstance(result, Exception):
+                raise result
+
         valid_results = [result for result in results if isinstance(result, ArxivPaper)]
 
         return valid_results
@@ -85,10 +91,11 @@ class GrobidParser(Parser):
             )
 
         soup = BeautifulSoup(response.content, "lxml-xml")
+        tables = self._get_tables(soup)
 
         paper = ArxivPaper(
-            sections=self._get_sections(soup),
-            tables=self._get_tables(soup),
+            sections=self._get_sections(soup, tables),
+            tables=[table for table in tables.values()],
             references=self._get_references(soup),
             metadata=arxiv_metadata,
         )
@@ -111,26 +118,36 @@ class GrobidParser(Parser):
 
         return coords.split(",")[0]
 
-    def _get_paragraphs(self, container: Tag) -> List[Paragraph]:
+    def _get_paragraphs(self, section: Tag, table_map: Dict[str, Table]) -> List[Paragraph]:
         """
         Extracts all paragraphs from a given XML container.
 
         Args:
-            container: The XML tag (like a <div>) containing <p> tags.
+            section: The XML tag (like a <div>) containing <p> tags.
 
         Returns:
             List[Paragraph]: A list of Paragraph objects with text and page numbers.
         """
-        return [
-            Paragraph(
-                text=p_tag.get_text(strip=True),
-                page=self._get_page(p_tag)
-            )
-            for p_tag in container.select("p")
-            if p_tag.get_text(strip=True)
-        ]
+        paragraphs = []
 
-    def _get_sections(self, soup: BeautifulSoup) -> List[Section]:
+        for paragraph_tag in section.select("p"):
+            if text:=paragraph_tag.get_text():
+                table_ids = set()
+
+                for ref_tag in paragraph_tag.select("ref[type=\"table\"]"):
+                    table_ids.add(ref_tag.attrs["target"][1:])
+
+                paragraphs.append(
+                    Paragraph(
+                        text=text,
+                        page=self._get_page(paragraph_tag),
+                        tables=[table_map[id] for id in table_ids],
+                    )
+                )
+
+        return paragraphs
+
+    def _get_sections(self, soup: BeautifulSoup, table_map: Dict[str, Table]) -> List[Section]:
         """
         Extracts document sections (Introduction, Methods, etc.) from the TEI body.
 
@@ -147,16 +164,19 @@ class GrobidParser(Parser):
             if not head:
                 continue
 
-            sections.append(Section(
-                number=head.get("n", "—"),  # Use "—" if section number is missing
-                title=head.get_text(strip=True),
-                page=self._get_page(head),
-                paragraphs=self._get_paragraphs(div)
-            ))
+            sections.append(
+                Section(
+                    id=uuid4(),
+                    number=head.get("n", "—"),  # Use "—" if section number is missing
+                    title=head.get_text(strip=True),
+                    page=self._get_page(head),
+                    paragraphs=self._get_paragraphs(div, table_map)
+                )
+            )
 
         return sections
 
-    def _get_tables(self, soup: BeautifulSoup) -> List[Table]:
+    def _get_tables(self, soup: BeautifulSoup) -> Dict[str, Table]:
         """
         Extracts tables and converts them from TEI format to Markdown.
 
@@ -164,23 +184,25 @@ class GrobidParser(Parser):
             soup: The parsed BeautifulSoup object.
 
         Returns:
-            List[Table]: A list of Table objects with Markdown content and descriptions.
+            Dict[str, Table]: A map containing table's ids and tables.
         """
-        tables = []
+        tables = {}
         for table_fig in soup.select("body > figure[type='table']"):
             head = table_fig.select_one("head")
             desc = table_fig.select_one("figDesc")
             xml_table = table_fig.select_one("table")
+            id = table_fig.attrs["xml:id"]
 
             if not xml_table:
                 continue
 
-            tables.append(Table(
+            tables[id] = Table(
+                id=uuid4(),
                 caption=head.get_text(strip=True) if head else "Table",
                 text=self._tei_table_to_md(xml_table),
                 description=desc.get_text(strip=True) if desc else "",
                 page=self._get_page(table_fig)
-            ))
+            )
 
         return tables
 
