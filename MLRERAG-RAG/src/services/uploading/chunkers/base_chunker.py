@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List
 
-from src.shared.schemas import ArxivPaperWithTags, Chunk
+from src.shared.schemas import TaggedArxivPaper, ChunkedArxivPaper
 
 
 class Chunker(ABC):
@@ -12,7 +12,7 @@ class Chunker(ABC):
     """
 
     @abstractmethod
-    def chunk(self, papers: List[ArxivPaperWithTags]) -> List[Chunk]:
+    def chunk(self, papers: List[TaggedArxivPaper]) -> List[ChunkedArxivPaper]:
         """Split papers into chunks according to the chunking strategy.
 
         Args:

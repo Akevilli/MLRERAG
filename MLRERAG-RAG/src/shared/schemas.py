@@ -1,7 +1,8 @@
 from typing import List, Sequence
 from enum import Enum
+from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
 
 
 class PaperUploadDTO(BaseModel):
@@ -98,11 +99,19 @@ class PaperTag(BaseModel):
         """
         return f"{self.domain.value}/{self.category.value}/{self.entity}"
 
+class Table(BaseModel):
+    """Model representing a table extracted from a paper."""
+    id: UUID = Field(description="Table id.")
+    caption: str = Field(description="Table caption.")
+    text: str = Field(description="Table text.")
+    description: str = Field(description="Table description.")
+    page: str = Field(description="Table page number.")
 
 class Paragraph(BaseModel):
     """Model representing a paragraph within a paper section."""
     text: str = Field(description="Paper text.")
     page: str = Field(description="Paper page number.")
+    tables: List[Table] = Field(description="Table list.")
 
     def __str__(self) -> str:
         """Returns the string representation of the paragraph.
@@ -111,11 +120,15 @@ class Paragraph(BaseModel):
         """
         return self.text
 
-class Section(BaseModel):
-    """Model representing a document section with its content."""
+class SectionBase(BaseModel):
+    """Model representing a document section without its content."""
+    id: UUID = Field(description="Unique identifier of section.")
     number: str = Field(description="Section number.")
     title: str = Field(description="Section title.")
     page: str = Field(description="Section page.")
+
+class Section(SectionBase):
+    """Model representing a document section with its content via paragraphs."""
     paragraphs: List[Paragraph] = Field(description="Section paragraphs.")
 
     def __str__(self) -> str:
@@ -126,59 +139,69 @@ class Section(BaseModel):
 
         return f"{self.number} {self.title}\n\n" + "\n".join([str(paragraph) for paragraph in self.paragraphs])
 
-class Table(BaseModel):
-    """Model representing a table extracted from a paper."""
-    caption: str = Field(description="Table caption.")
-    text: str = Field(description="Table text.")
-    description: str = Field(description="Table description.")
-    page: str = Field(description="Table page number.")
-
 class Reference(BaseModel):
     """Model representing a bibliography reference."""
     link: str = Field(description="Reference link.")
 
-class ArxivPaper(BaseModel):
-    """Model representing a parsed arXiv paper with structured content."""
-    sections: List[Section] = Field(description="List of sections.")
-    tables: List[Table] = Field(description="List of tables.")
+class ArxivPaperBase(BaseModel):
+    """Model representing an arxiv paper without content."""
     references: List[Reference] = Field(description="List of references.")
     metadata: ArxivMetadata = Field(description="Arxiv metadata.")
 
+class ArxivPaper(ArxivPaperBase):
+    """Model representing a parsed arXiv paper with structured content."""
+    sections: List[Section] = Field(description="List of sections.")
+    tables: List[Table] = Field(description="List of tables.")
 
-class ArxivPaperWithTags(ArxivPaper):
+
+class TaggedArxivPaper(ArxivPaper):
     """Model representing a parsed arXiv paper with structured content and tags."""
     tags: List[PaperTag] = Field(description="List of paper tags.")
 
+    @field_serializer("tags", when_used="json")
+    def serialize_tags(self, tags: List[PaperTag]) -> List[str]:
+        return [str(tag) for tag in tags]
 
-class ChunkMetadata(ArxivMetadata):
-    """Metadata associated with a paper chunk.
-
-    Extends ArxivMetadata with chunk-specific information including
-    tags, page location, and section name.
-
-    Attributes:
-        tags: List of paper tags associated with the chunk.
-        page: Page number where the chunk starts.
-        section_name: Name of the section containing the chunk.
-    """
-
-    tags: List[PaperTag] = Field(description="List of paper tags.")
-    page: str = Field(description="Page where chunk starts.")
-    section_name: str = Field(description="Section where chunk locates.")
 
 class Chunk(BaseModel):
     """Schema representing a paper chunk for the uploading process.
 
-    A chunk is a segment of a paper's content with associated metadata,
-    used for downstream processing and storage.
+    A chunk is a segment of a paper's content, used for downstream processing and storage.
 
     Attributes:
-        content: The text content of the chunk.
-        metadata: Metadata describing the chunk's source and location.
+        text: The text content of the chunk.
+        page: The number of page where the chunk starts.
     """
+    id: UUID = Field(description="Chunk ID.")
+    text: str = Field(description="Chunk content.")
+    page: str = Field(description="Chunk page number.")
+    tables: List[Table] = Field(description="Chunk tables.")
 
-    content: str = Field(description="Chunk content.")
-    metadata: ChunkMetadata = Field(description="Chunk metadata.")
+class ChunkedSection(SectionBase):
+    """Model representing a paper chunked section."""
+    chunks: List[Chunk] = Field(description="List of section's chunks.", default_factory=list)
 
-class ChunkWithEmbedding(Chunk):
+    def __str__(self) -> str:
+        """Returns the string representation of the section."""
+        return "\n".join([chunk.content for chunk in self.chunks])
+
+class ChunkedArxivPaper(TaggedArxivPaper):
+    """Model representing a parsed arxiv paper with chunked content."""
+    sections: List[ChunkedSection] = Field(description="List of chunked sections of paper.", default_factory=list)
+    tables: List[Table] = Field(description="List of tables.")
+
+class EmbeddedChunk(Chunk):
     embedding: Sequence[float] = Field(description="Chunk embedding.")
+
+class EmbeddedSection(SectionBase):
+    """Model representing a paper embedded section."""
+    chunks: List[EmbeddedChunk] = Field(description="List of embedded section's chunks.")
+
+class EmbeddedTable(Table):
+    """Model representing a paper embedded table."""
+    embedding: Sequence[float] = Field(description="Table embedding.")
+
+class EmbeddedArxivPaper(TaggedArxivPaper):
+    """Model representing a parsed arxiv paper with embedded sections and tables."""
+    sections: List[EmbeddedSection] = Field(description="List of embedded sections.")
+    tables: List[EmbeddedTable] = Field(description="List of embedded tables.")

@@ -2,10 +2,9 @@ import asyncio
 from typing import List, Sequence
 
 from ollama import AsyncClient
-from loguru import logger
 
 from .base_embedder import Embedder
-from ..schemas import Chunk, ChunkWithEmbedding
+from ..schemas import ChunkedArxivPaper, EmbeddedArxivPaper, EmbeddedSection, EmbeddedTable, EmbeddedChunk
 from ..lib import get_batch
 
 
@@ -45,39 +44,78 @@ class OllamQwenEmbedder(Embedder):
 
         self._semaphore = asyncio.Semaphore(3)
 
-    async def embed_document(self, chunks: List[Chunk]) -> List[ChunkWithEmbedding]:
+    async def embed_document(self, chunked_papers: List[ChunkedArxivPaper]) -> List[EmbeddedArxivPaper]:
         """Embed document chunks with retrieval-optimized prompts.
 
         Processes chunks in batches, prepending document-specific instructions
         to optimize embeddings for document retrieval use cases.
 
         Args:
-            chunks: List of Chunk objects containing document content to embed.
+            chunked_papers: List of Chunk objects containing document content to embed.
 
         Returns:
             List of ChunkWithEmbedding objects with original chunk data and
             corresponding embedding vectors.
         """
-        request_texts = self._add_request([chunk.content for chunk in chunks], True)
-        all_embeddings = []
+        result = []
 
-        async with self._semaphore:
-            async for batch in get_batch(request_texts, self._batch_size):
-                response = await self._ollama_client.embed(
-                    model=self._model,
-                    input=batch,
-                    dimensions=self._embedding_dim,
+        for paper in chunked_papers:
+            chunks = [chunk for section in paper.sections for chunk in section.chunks]
+            tables = paper.tables
+
+            text_to_embed = self._add_request([chunk.text for chunk in chunks] + [table.text for table in tables], True)
+            all_embeddings = []
+
+            async for batch in get_batch(text_to_embed, self._batch_size):
+                async with self._semaphore:
+                    response = await self._ollama_client.embed(
+                        model=self._model,
+                        input=batch,
+                        dimensions=self._embedding_dim,
+                    )
+                    all_embeddings.extend(response.embeddings)
+
+            chunk_embeddings = all_embeddings[:len(chunks)]
+            table_embeddings = all_embeddings[len(chunks):]
+
+            chunk_embedding_mapping = {chunk.id: embedding for chunk, embedding in zip(chunks, chunk_embeddings)}
+
+            embedded_sections = []
+
+            for section in paper.sections:
+                embedded_chunks = [
+                    EmbeddedChunk(
+                        **chunk.model_dump(),
+                        embedding=chunk_embedding_mapping[chunk.id]
+                    )
+                    for chunk in section.chunks
+                ]
+
+                embedded_sections.append(
+                    EmbeddedSection(
+                        **section.model_dump(exclude={"chunks"}),
+                        chunks=embedded_chunks
+                    )
                 )
-                all_embeddings.extend(response.embeddings)
 
-        result = [
-            ChunkWithEmbedding(
-                **chunk.model_dump(),
-                embedding=embedding)
-            for chunk, embedding in zip(chunks, all_embeddings)
-        ]
+            embedded_tables = [
+                EmbeddedTable(
+                    **table.model_dump(),
+                    embedding=embedding
+                )
+                for table, embedding in zip(tables, table_embeddings)
+            ]
+
+            result.append(
+                EmbeddedArxivPaper(
+                    **paper.model_dump(exclude={"sections", "tables"}),
+                    sections=embedded_sections,
+                    tables=embedded_tables
+                )
+            )
 
         return result
+
 
     async def embed_query(self, query: List[str]) -> Sequence[Sequence[float]]:
         """Embed search queries with query-optimized prompts.

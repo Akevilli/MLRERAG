@@ -2,7 +2,7 @@ from datetime import datetime
 
 from loguru import logger
 
-from src.shared import PaperUploadDTO, Embedder, QdrantRepository, get_batch
+from src.shared import PaperUploadDTO, Embedder, QdrantRepository, get_batch, Neo4jRepository
 from .papers import PaperService
 from .providers import Provider
 from .parsers import Parser
@@ -33,6 +33,7 @@ class PaperIngestionService:
             chunker: Chunker,
             embedder: Embedder,
             qdrant_repository: QdrantRepository,
+            neo4j_repository: Neo4jRepository,
             batch_size: int
     ):
         """Initializes the PaperIngestionService with required dependencies.
@@ -51,6 +52,7 @@ class PaperIngestionService:
         self._chunker = chunker
         self._embedder = embedder
         self._qdrant_repository = qdrant_repository
+        self._neo4j_repository = neo4j_repository
         self._batch_size = batch_size
 
     async def process(self, upload_dto: PaperUploadDTO):
@@ -67,10 +69,11 @@ class PaperIngestionService:
             logger.debug(f"Processing paper(s) {upload_dto.id_list}.")
             arxiv_metadata = await self._arxiv_provider.get_metadata(upload_dto.id_list)
             unloaded_arxiv_metadata = await self._paper_service.register_papers(arxiv_metadata)
+
+            await self._paper_service.delete_papers(upload_dto.id_list)  # delete
+
             download_generator = self._arxiv_provider.download([paper.arxiv_id for paper in unloaded_arxiv_metadata])
             arxiv_metadata_map = {metadata.arxiv_id: metadata for metadata in unloaded_arxiv_metadata}
-
-            await self._paper_service.delete_papers(upload_dto.id_list) # delete
 
             logger.debug(f"Start downloading paper(s) {[metadata.arxiv_id for metadata in unloaded_arxiv_metadata]}.")
             async for batch in get_batch(download_generator, self._batch_size):
@@ -98,24 +101,22 @@ class PaperIngestionService:
                     f"Total time: {(tagging_end - tagging_start).total_seconds()} seconds. "
                 )
 
-                chunks = self._chunker.chunk(tagged_arxiv_papers)
+                chunked_papers = self._chunker.chunk(tagged_arxiv_papers)
                 logger.debug(
-                    f"Paper(s) {[arxiv_paper.metadata.arxiv_id for arxiv_paper in tagged_arxiv_papers]} wa(s/re) chunked. "
-                    f"Total chunks: {len(chunks)}."
+                    f"Paper(s) {[arxiv_paper.metadata.arxiv_id for arxiv_paper in tagged_arxiv_papers]} wa(s/re) chunked."
                 )
 
                 embedding_start = datetime.now()
-                chunks_with_embeddings = await self._embedder.embed_document(chunks)
+                embedded_papers = await self._embedder.embed_document(chunked_papers)
                 embedding_end = datetime.now()
                 logger.debug(
-                    f"{len(chunks_with_embeddings)} chunks were embedded."
                     f"Total time: {(embedding_end - embedding_start).total_seconds()} seconds."
                 )
 
-                chunk_ids = await self._qdrant_repository.upload_chunks(chunks_with_embeddings)
-                result.extend(chunk_ids)
+                await self._qdrant_repository.upload_chunks(embedded_papers)
+                await self._neo4j_repository.upload_papers(embedded_papers)
 
             return result
-        except Exception as e:
-            logger.error(e)
+        except:
             await self._paper_service.delete_papers(upload_dto.id_list)
+            raise

@@ -1,6 +1,9 @@
 from typing import List
+from uuid import uuid4
 
-from src.shared.schemas import ArxivPaperWithTags, Chunk, ChunkMetadata
+from loguru import logger
+
+from src.shared.schemas import TaggedArxivPaper, ChunkedArxivPaper, ChunkedSection, Chunk
 from .base_chunker import Chunker
 
 
@@ -26,7 +29,7 @@ class SectionBoundChunker(Chunker):
         self._chunk_size = chunk_size
         self._overlap = overlap
 
-    def chunk(self, papers: List[ArxivPaperWithTags]) -> List[Chunk]:
+    def chunk(self, papers: List[TaggedArxivPaper]) -> List[ChunkedArxivPaper]:
         """Split papers into chunks respecting section boundaries.
 
         Processes each paper's sections separately, splitting paragraphs
@@ -38,24 +41,29 @@ class SectionBoundChunker(Chunker):
                 contains sections with paragraphs that will be processed.
 
         Returns:
-            List of Chunk objects with content and metadata including
+            List of ChunkedArxivPaper objects with content and metadata including
             source paper information, tags, page number, and section name.
         """
-        result = []
+        chunked_papers = []
 
         for paper in papers:
-            paper_metadata = paper.metadata.model_dump()
+            chunked_paper = ChunkedArxivPaper(**paper.model_dump(exclude={"sections"}))
 
             for section in paper.sections:
+                chunked_section = ChunkedSection(**section.model_dump(exclude={"paragraphs"}))
                 new_chunk_content = ""
                 current_page = section.page
+                tables = []
 
                 for paragraph in section.paragraphs:
+                    logger.debug(f"Tables: {paragraph.tables}")
                     if new_chunk_content:
                         new_chunk_content += " " + paragraph.text
+                        tables.extend(paragraph.tables)
                     else:
                         new_chunk_content = paragraph.text
                         current_page = paragraph.page
+                        tables.extend(paragraph.tables)
 
                     while len(new_chunk_content) >= self._chunk_size:
                         split_idx = new_chunk_content.find(" ", self._chunk_size)
@@ -67,31 +75,34 @@ class SectionBoundChunker(Chunker):
                         if split_idx <= self._overlap:
                             split_idx = self._chunk_size
 
-                        result.append(Chunk(
-                            content=new_chunk_content[:split_idx].strip(),
-                            metadata=ChunkMetadata(
-                                **paper_metadata,
-                                tags=paper.tags,
+                        chunked_section.chunks.append(
+                            Chunk(
+                                id=uuid4(),
+                                text=new_chunk_content[:split_idx].strip(),
                                 page=current_page,
-                                section_name=section.title
+                                tables=tables
                             )
-                        ))
+                        )
 
                         start_index = new_chunk_content.find(" ", split_idx - self._overlap, split_idx)
                         if start_index < 0:
                             start_index = split_idx - self._overlap
 
                         new_chunk_content = new_chunk_content[start_index:].strip()
+                        tables = paragraph.tables
 
                 if new_chunk_content:
-                    result.append(Chunk(
-                        content=new_chunk_content,
-                        metadata=ChunkMetadata(
-                            **paper_metadata,
-                            tags=paper.tags,
+                    chunked_section.chunks.append(
+                        Chunk(
+                            id=uuid4(),
+                            text=new_chunk_content,
                             page=current_page,
-                            section_name=section.title
+                            tables=tables
                         )
-                    ))
+                    )
 
-        return result
+                chunked_paper.sections.append(chunked_section)
+
+            chunked_papers.append(chunked_paper)
+
+        return chunked_papers

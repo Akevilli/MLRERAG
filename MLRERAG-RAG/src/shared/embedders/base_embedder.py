@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Sequence
 
-from ..schemas import Chunk, ChunkWithEmbedding
+from ..schemas import ChunkedArxivPaper, EmbeddedArxivPaper
 
 
 class Embedder(ABC):
@@ -12,7 +12,7 @@ class Embedder(ABC):
     """
 
     @abstractmethod
-    async def embed_document(self, chunks: List[Chunk]) -> List[ChunkWithEmbedding]:
+    async def embed_document(self, chunked_papers: List[ChunkedArxivPaper]) -> List[EmbeddedArxivPaper]:
         """Embed a list of document chunks into vector representations.
 
         Args:
