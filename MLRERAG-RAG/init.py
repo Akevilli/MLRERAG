@@ -1,17 +1,21 @@
 import asyncio
 import sys
 import selectors
+from pathlib import Path
 
 from qdrant_client import models
 
-from src.shared.database import Base, engine, qdrant_client
+from src.shared.database import Base, engine, qdrant_client, neo4j_client
 from src.core.config import settings
 
 
 async def init():
+    # Postgres
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
+    # Qdrant
+    await qdrant_client.delete_collection(collection_name=settings.VECTOR_DB_COLLECTION)
     await qdrant_client.create_collection(
         collection_name=settings.VECTOR_DB_COLLECTION,
         vectors_config=models.VectorParams(
@@ -37,6 +41,17 @@ async def init():
             phrase_matching=True,
         ),
     )
+
+    # Neo4j
+    drop_all_command = Path("./.init/neo4j/procedures/01_drop_old_procedures.cypher").read_text()
+    async with neo4j_client.session(database="system") as session:
+        await session.execute_write(lambda tx: tx.run(drop_all_command))
+
+    create_paper_hierarchy_procedure = Path("./.init/neo4j/procedures/02_create_paper_hierarchy.cypher").read_text()
+    create_cites_links_procedure = Path("./.init/neo4j/procedures/03_create_cites_links.cypher").read_text()
+    async with neo4j_client.session(database=settings.GRAPH_DB_DATABASE) as session:
+        await session.execute_write(lambda tx: tx.run(create_paper_hierarchy_procedure))
+        await session.execute_write(lambda tx: tx.run(create_cites_links_procedure))
 
 
 if __name__ == "__main__":

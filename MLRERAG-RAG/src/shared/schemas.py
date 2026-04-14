@@ -107,11 +107,21 @@ class Table(BaseModel):
     description: str = Field(description="Table description.")
     page: str = Field(description="Table page number.")
 
+    def get_full_text(self) -> str:
+        """Returns the string representation of the table, with caption and description."""
+
+        return f"{self.caption}\n\n{self.text}\n\n{self.description}"
+
+class Reference(BaseModel):
+    """Model representing a bibliography reference."""
+    arxiv_id: str = Field(description="Id of paper which was referenced.")
+
 class Paragraph(BaseModel):
     """Model representing a paragraph within a paper section."""
     text: str = Field(description="Paper text.")
     page: str = Field(description="Paper page number.")
     tables: List[Table] = Field(description="Table list.")
+    references: List[Reference] = Field(description="Reference list.")
 
     def __str__(self) -> str:
         """Returns the string representation of the paragraph.
@@ -138,10 +148,6 @@ class Section(SectionBase):
         """
 
         return f"{self.number} {self.title}\n\n" + "\n".join([str(paragraph) for paragraph in self.paragraphs])
-
-class Reference(BaseModel):
-    """Model representing a bibliography reference."""
-    link: str = Field(description="Reference link.")
 
 class ArxivPaperBase(BaseModel):
     """Model representing an arxiv paper without content."""
@@ -176,6 +182,7 @@ class Chunk(BaseModel):
     text: str = Field(description="Chunk content.")
     page: str = Field(description="Chunk page number.")
     tables: List[Table] = Field(description="Chunk tables.")
+    references: List[Reference] = Field(description="Chunk references.")
 
 class ChunkedSection(SectionBase):
     """Model representing a paper chunked section."""

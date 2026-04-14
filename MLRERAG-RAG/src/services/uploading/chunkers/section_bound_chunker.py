@@ -1,8 +1,6 @@
 from typing import List
 from uuid import uuid4
 
-from loguru import logger
-
 from src.shared.schemas import TaggedArxivPaper, ChunkedArxivPaper, ChunkedSection, Chunk
 from .base_chunker import Chunker
 
@@ -54,16 +52,18 @@ class SectionBoundChunker(Chunker):
                 new_chunk_content = ""
                 current_page = section.page
                 tables = []
+                references = []
 
                 for paragraph in section.paragraphs:
-                    logger.debug(f"Tables: {paragraph.tables}")
+                    tables.extend(paragraph.tables)
+                    references.extend(paragraph.references)
+
                     if new_chunk_content:
                         new_chunk_content += " " + paragraph.text
-                        tables.extend(paragraph.tables)
                     else:
                         new_chunk_content = paragraph.text
                         current_page = paragraph.page
-                        tables.extend(paragraph.tables)
+
 
                     while len(new_chunk_content) >= self._chunk_size:
                         split_idx = new_chunk_content.find(" ", self._chunk_size)
@@ -80,7 +80,8 @@ class SectionBoundChunker(Chunker):
                                 id=uuid4(),
                                 text=new_chunk_content[:split_idx].strip(),
                                 page=current_page,
-                                tables=tables
+                                tables=tables,
+                                references=references
                             )
                         )
 
@@ -90,6 +91,7 @@ class SectionBoundChunker(Chunker):
 
                         new_chunk_content = new_chunk_content[start_index:].strip()
                         tables = paragraph.tables
+                        references = paragraph.references
 
                 if new_chunk_content:
                     chunked_section.chunks.append(
@@ -97,7 +99,8 @@ class SectionBoundChunker(Chunker):
                             id=uuid4(),
                             text=new_chunk_content,
                             page=current_page,
-                            tables=tables
+                            tables=tables,
+                            references=references
                         )
                     )
 
