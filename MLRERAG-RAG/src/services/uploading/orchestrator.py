@@ -69,9 +69,6 @@ class PaperIngestionService:
             logger.debug(f"Processing paper(s) {upload_dto.id_list}.")
             arxiv_metadata = await self._arxiv_provider.get_metadata(upload_dto.id_list)
             unloaded_arxiv_metadata = await self._paper_service.register_papers(arxiv_metadata)
-
-            await self._paper_service.delete_papers(upload_dto.id_list)  # delete
-
             download_generator = self._arxiv_provider.download([paper.arxiv_id for paper in unloaded_arxiv_metadata])
             arxiv_metadata_map = {metadata.arxiv_id: metadata for metadata in unloaded_arxiv_metadata}
 
@@ -113,10 +110,14 @@ class PaperIngestionService:
                     f"Total time: {(embedding_end - embedding_start).total_seconds()} seconds."
                 )
 
+                cited_papers_metadata = await self._arxiv_provider.get_metadata([reference.arxiv_id for paper in embedded_papers for reference in paper.references])
+                result.extend(cited_papers_metadata)
+
                 await self._qdrant_repository.upload_chunks(embedded_papers)
-                await self._neo4j_repository.upload_papers(embedded_papers)
+                await self._neo4j_repository.upload_papers(chunked_papers, cited_papers_metadata)
 
             return result
         except:
-            await self._paper_service.delete_papers(upload_dto.id_list)
             raise
+        finally:
+            await self._paper_service.delete_papers(upload_dto.id_list)  # delete

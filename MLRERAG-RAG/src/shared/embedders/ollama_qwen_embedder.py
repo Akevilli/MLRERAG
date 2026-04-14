@@ -63,7 +63,7 @@ class OllamQwenEmbedder(Embedder):
             chunks = [chunk for section in paper.sections for chunk in section.chunks]
             tables = paper.tables
 
-            text_to_embed = self._add_request([chunk.text for chunk in chunks] + [table.text for table in tables], True)
+            text_to_embed = self._add_request([chunk.text for chunk in chunks] + [table.get_full_text() for table in tables], True)
             all_embeddings = []
 
             async for batch in get_batch(text_to_embed, self._batch_size):
