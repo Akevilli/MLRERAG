@@ -1,4 +1,3 @@
-from .UploadSchema import UploadSchema
-from .UploadResponseSchema import UploadResponseSchema
+from .rag import *
 from .QuerySchema import QuerySchema
 from .QueryResponseSchema import QueryResponseSchema

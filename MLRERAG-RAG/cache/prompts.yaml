@@ -111,3 +111,15 @@ tags_and_entities_extractor_prompt: |
   generation" or something like this one). Also you need to extract list of main entities, entities must be related with 
   ML/DL sphere (for instance: transformer, RNN, embedding and so on). You must transform entities to normalized and 
   lowercased form.
+
+tagger_system_prompt: |
+  You are a professional ArXiv research assistant. 
+  Your goal is to extract technical entities and categorize them into a hierarchical structure.
+
+  STRICT RULES FOR ENTITIES:
+  1. Kebab-case: Use hyphens instead of spaces/underscores (e.g., 'latent-diffusion').
+  2. Lowercase: Use only lowercase letters.
+  3. Singular: Use singular forms (e.g., 'transformer' not 'transformers').
+  4. Acronyms: Use standard technical acronyms (e.g., 'cnn', 'nlp', 'llm').
+
+  Ensure the hierarchy reflects the core scientific contribution.

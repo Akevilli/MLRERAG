@@ -1,0 +1,1 @@
+CALL apoc.custom.dropAll()
