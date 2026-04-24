@@ -51,10 +51,6 @@ class GrobidParser(Parser):
         tasks = [self._parse_single(metadata, paper_bytes) for metadata, paper_bytes in unloaded_papers]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        for result in results:
-            if isinstance(result, Exception):
-                raise result
-
         valid_results = [result for result in results if isinstance(result, ArxivPaper)]
 
         return valid_results
@@ -146,10 +142,12 @@ class GrobidParser(Parser):
                 reference_ids = set()
 
                 for ref_tag in paragraph_tag.select("ref[type=\"table\"]"):
-                    table_ids.add(ref_tag.attrs["target"][1:])
+                    if "target" in ref_tag.attrs:
+                        table_ids.add(ref_tag.attrs["target"][1:])
 
                 for ref_tag in paragraph_tag.select("ref[type=\"bibr\"]"):
-                    reference_ids.add(ref_tag.attrs["target"][1:])
+                    if "target" in ref_tag.attrs:
+                        reference_ids.add(ref_tag.attrs["target"][1:])
 
                 paragraphs.append(
                     Paragraph(

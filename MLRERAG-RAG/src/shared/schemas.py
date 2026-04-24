@@ -12,7 +12,9 @@ class PaperUploadDTO(BaseModel):
 
 class UploadedPaperDTO(BaseModel):
     """Data transfer object for uploaded paper responses."""
-    id_list: List[str]
+    loaded: set[str]
+    failed: set[str]
+    cited: set[str]
 
 
 class ArxivMetadata(BaseModel):
@@ -110,7 +112,7 @@ class Table(BaseModel):
     def get_full_text(self) -> str:
         """Returns the string representation of the table, with caption and description."""
 
-        return f"{self.caption}\n\n{self.text}\n\n{self.description}"
+        return f"{self.caption} - page: {self.page}\n\n{self.text}\n\n{self.description}"
 
 class Reference(BaseModel):
     """Model representing a bibliography reference."""
@@ -180,6 +182,7 @@ class Chunk(BaseModel):
     """
     id: UUID = Field(description="Chunk ID.")
     text: str = Field(description="Chunk content.")
+    position: int = Field(description="Chunk position in section.")
     page: str = Field(description="Chunk page number.")
     tables: List[Table] = Field(description="Chunk tables.")
     references: List[Reference] = Field(description="Chunk references.")
@@ -212,3 +215,19 @@ class EmbeddedArxivPaper(TaggedArxivPaper):
     """Model representing a parsed arxiv paper with embedded sections and tables."""
     sections: List[EmbeddedSection] = Field(description="List of embedded sections.")
     tables: List[EmbeddedTable] = Field(description="List of embedded tables.")
+
+class MessageType(str, Enum):
+    """Enum representing the message type."""
+    SYSTEM = "system"
+    USER = "user"
+    ASSISTANT = "assistant"
+    TOOL = "tool"
+
+class Message(BaseModel):
+    """Model representing a message."""
+    text: str = Field(description="Message text.")
+    type: MessageType = Field(description="Message type.")
+
+class ChatHistory(BaseModel):
+    """Model representing a chat history."""
+    messages: List[Message] = Field(description="List of messages.")

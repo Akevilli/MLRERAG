@@ -1,7 +1,2 @@
-# from src.services.uploading.parsers import Parser, LlamaParser
-# from src.services.chunks.Chunkers import Chunker, SemanticBaseChunker
-# from .embedders import Embedder, HuggingFaceEmbedder
-# from .chunks import ChunkService
-# from .rag import RAGService
-# from .metadata import TagsAndEntitiesExtractor
 from .uploading import *
+from .retrieving import *

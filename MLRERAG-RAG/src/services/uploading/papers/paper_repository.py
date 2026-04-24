@@ -66,7 +66,7 @@ class PaperRepository:
 
         return reserved_papers
 
-    async def update(self, entity: Paper, update_dto: PaperRecordUpdateDTO) -> Paper:
+    def update(self, entity: Paper, update_dto: PaperRecordUpdateDTO) -> Paper:
         """Update an existing Paper entity with partial data from a DTO.
 
         Applies only the fields that are explicitly set in the update_dto
@@ -125,4 +125,3 @@ class PaperRepository:
         """
         stmt = delete(Paper).where(Paper.arxiv_id==arxiv_id)
         await self._session.execute(stmt)
-

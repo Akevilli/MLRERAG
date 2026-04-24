@@ -53,6 +53,7 @@ class SectionBoundChunker(Chunker):
                 current_page = section.page
                 tables = []
                 references = []
+                position = 0
 
                 for paragraph in section.paragraphs:
                     tables.extend(paragraph.tables)
@@ -79,6 +80,7 @@ class SectionBoundChunker(Chunker):
                             Chunk(
                                 id=uuid4(),
                                 text=new_chunk_content[:split_idx].strip(),
+                                position=position,
                                 page=current_page,
                                 tables=tables,
                                 references=references
@@ -92,12 +94,14 @@ class SectionBoundChunker(Chunker):
                         new_chunk_content = new_chunk_content[start_index:].strip()
                         tables = paragraph.tables
                         references = paragraph.references
+                        position += 1
 
                 if new_chunk_content:
                     chunked_section.chunks.append(
                         Chunk(
                             id=uuid4(),
                             text=new_chunk_content,
+                            position=position,
                             page=current_page,
                             tables=tables,
                             references=references
