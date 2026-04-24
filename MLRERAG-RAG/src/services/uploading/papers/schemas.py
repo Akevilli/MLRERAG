@@ -44,6 +44,5 @@ class PaperRecordUpdateDTO(BaseModel):
 
     All fields are optional to support partial updates.
     """
-
-    version: Optional[int] = None
+    version: Optional[str] = None
     load_status: Optional[Literal["in_progress", "completed"]] = None

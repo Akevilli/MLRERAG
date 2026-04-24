@@ -38,6 +38,9 @@ class ArxivProvider(Provider):
         Returns:
             List of ArxivMetadata objects containing title, summary, authors, etc.
         """
+        if not id_list:
+            return []
+
         query = Search(id_list=id_list)
 
         def _fetch():

@@ -3,8 +3,11 @@ CALL apoc.custom.declareProcedure(
     '
         UNWIND $cited_papers_metadata AS cited_paper_metadata
         MERGE (cp:Paper {arxiv_id: cited_paper_metadata.arxiv_id})
-        SET cp += cited_paper_metadata,
+        ON CREATE SET
+            cp += cited_paper_metadata,
             cp.is_loaded = false
+        ON MATCH SET
+            cp += cited_paper_metadata
 
         WITH $papers AS papers
         UNWIND papers AS paper

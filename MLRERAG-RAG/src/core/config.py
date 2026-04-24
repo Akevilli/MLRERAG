@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -8,6 +11,8 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore"
     )
+
+    BASE_DIR: Path = Path(__file__).parent.parent.parent
 
     RAG_PORT: int
     BATCH_SIZE: int

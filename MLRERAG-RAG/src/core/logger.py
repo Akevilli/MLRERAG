@@ -4,6 +4,16 @@ import sys
 from loguru import logger
 
 
+noisy = [
+    "neo4j",
+    "httpcore",
+    "httpx",
+    "openai",
+    "langchain_core",
+    "ollama",
+    "xai-sdk"
+]
+
 class InterceptHandler(logging.Handler):
     def emit(self, record):
         try:
@@ -26,7 +36,17 @@ def configure_logger():
         colorize=True,
         format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
     )
-    logger.add(".logs/app.log", rotation="10 MB", retention="10 days", compression="zip", encoding="utf-8", serialize=True)
+    logger.add(
+        ".logs/app.log",
+        rotation="10 MB",
+        retention="10 days",
+        compression="zip",
+        encoding="utf-8",
+        serialize=True
+    )
+
+    for lib in noisy:
+        logging.getLogger(lib).setLevel(logging.WARNING)
 
     logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
 
