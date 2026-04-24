@@ -2,7 +2,7 @@ from datetime import datetime
 
 from loguru import logger
 
-from src.shared import PaperUploadDTO, Embedder, QdrantRepository, get_batch, Neo4jRepository
+from src.shared import PaperUploadDTO, UploadedPaperDTO, Embedder, QdrantRepository, get_batch, Neo4jRepository
 from .papers import PaperService
 from .providers import Provider
 from .parsers import Parser
@@ -55,7 +55,7 @@ class PaperIngestionService:
         self._neo4j_repository = neo4j_repository
         self._batch_size = batch_size
 
-    async def process(self, upload_dto: PaperUploadDTO):
+    async def process(self, upload_dto: PaperUploadDTO) -> UploadedPaperDTO:
         """Processes a list of papers through the complete ingestion pipeline.
 
         Args:
@@ -64,8 +64,11 @@ class PaperIngestionService:
         Returns:
             List of ArxivPaperWithTags containing processed papers with tags.
         """
+        total_loaded = set()
+        total_failed = set()
+        total_cited = set()
+
         try:
-            result = []
             logger.debug(f"Processing paper(s) {upload_dto.id_list}.")
             arxiv_metadata = await self._arxiv_provider.get_metadata(upload_dto.id_list)
             unloaded_arxiv_metadata = await self._paper_service.register_papers(arxiv_metadata)
@@ -111,13 +114,23 @@ class PaperIngestionService:
                 )
 
                 cited_papers_metadata = await self._arxiv_provider.get_metadata([reference.arxiv_id for paper in embedded_papers for reference in paper.references])
-                result.extend(cited_papers_metadata)
 
                 await self._qdrant_repository.upload_chunks(embedded_papers)
                 await self._neo4j_repository.upload_papers(chunked_papers, cited_papers_metadata)
+                await self._paper_service.mark_as_loaded([paper.metadata for paper in embedded_papers])
 
-            return result
+                loaded = {paper.metadata.arxiv_id for paper in embedded_papers}
+                total_loaded.update(loaded)
+
+                failed = set([item[0].arxiv_id for item in current_batch]) - set(loaded)
+                total_failed.update(failed)
+
+                cited = {cited_paper.arxiv_id for paper in embedded_papers for cited_paper in paper.references}
+                total_cited.update(cited)
+
+            return UploadedPaperDTO(loaded=total_loaded, failed=total_failed, cited=total_cited)
         except:
             raise
         finally:
-            await self._paper_service.delete_papers(upload_dto.id_list)  # delete
+            total_failed += set(upload_dto.id_list) - total_loaded
+            await self._paper_service.delete_papers(list(total_failed))

@@ -7,6 +7,7 @@ import instructor
 from ollama import AsyncClient
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
+from langchain_xai import ChatXAI
 
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -21,12 +22,17 @@ from src.shared import (
 from .services import *
 from .core import settings
 
-
 # Clients
 _arxiv_client = arxiv.Client()
 _httpx_client = httpx.AsyncClient(headers={"User-Agent": "Mozilla/5.0"})
 _ollama_client = AsyncClient(
     host=f"{settings.OLLAMA_HOST}:{settings.OLLAMA_PORT}"
+)
+
+# LLM
+chat_xai = ChatXAI(
+    model=settings.GROK_MODEL,
+    api_key=settings.GROK_API_KEY,
 )
 
 # arXiv
@@ -131,4 +137,23 @@ def get_uploading_orchestrator(
         qdrant_repository=_qdrant_repository,
         neo4j_repository=neo4j_repository,
         batch_size=settings.BATCH_SIZE,
+    )
+
+# search engine
+async def _get_search_engine(
+        neo4j_repository: Neo4jRepository = Depends(get_neo4j_repository),
+):
+    return SearchEngine(
+        qdrant_repository=_qdrant_repository,
+        neo4j_repository=neo4j_repository,
+    )
+
+# retrieving
+def get_retrieving_orchestrator(
+        search_engine: SearchEngine = Depends(_get_search_engine),
+):
+    return RetrievingService(
+        embedder=_ollama_embedder,
+        search_engine=search_engine,
+        llm=chat_xai
     )

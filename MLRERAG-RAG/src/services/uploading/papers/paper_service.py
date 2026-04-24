@@ -1,12 +1,7 @@
 from typing import List
 
 from .paper_repository import PaperRepository
-from .lib import arxiv_metadata_to_paper_record_create_dto
-from .schemas import (
-    PaperRecordReadDTO,
-    PaperRecordCreateDTO,
-    PaperRecordUpdateDTO
-)
+from .lib import arxiv_metadata_to_paper_record_create_dto, arxiv_metadata_to_paper_record_update_dto
 from src.shared.schemas import ArxivMetadata
 
 
@@ -55,3 +50,10 @@ class PaperService:
         """
         for paper_id in paper_ids:
             await self._paper_repository.delete_by_arxiv_id(paper_id)
+
+    async def mark_as_loaded(self, papers_metadata: List[ArxivMetadata]):
+        update_dtos = [arxiv_metadata_to_paper_record_update_dto(paper, "completed") for paper in papers_metadata]
+        entities = await self._paper_repository.get_by_arxiv_ids([paper.arxiv_id for paper in papers_metadata])
+
+        for entity, update_dto in zip(entities, update_dtos):
+            self._paper_repository.update(entity, update_dto)

@@ -1,8 +1,8 @@
 from typing import List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-from src.shared.schemas import PaperUploadDTO
+from src.shared.schemas import PaperUploadDTO, Message, ChatHistory
 
 
 class PaperUploadRequest(BaseModel):
@@ -13,4 +13,17 @@ class PaperUploadRequest(BaseModel):
 
 
 class PaperUploadResponse(BaseModel):
-    id_list: List[str]
+    loaded: set[str]
+    failed: set[str]
+    cited: set[str]
+
+
+class GenerateAnswerRequest(BaseModel):
+    messages: List[Message] = Field(description="List of messages.")
+
+    def to_dto(self) -> ChatHistory:
+        return ChatHistory(**self.model_dump())
+
+
+class GenerateAnswerResponse(BaseModel):
+    messages: List[Message] = Field(description="List of messages.")

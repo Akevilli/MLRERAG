@@ -19,24 +19,25 @@ CALL apoc.custom.declareProcedure(
     UNWIND section.chunks AS chunk
     MERGE (c:Chunk {id: chunk.id})
     SET c.text = chunk.text,
-        c.page = chunk.page
+        c.page = chunk.page,
+        c.position = chunk.position
     MERGE (c)-[:PART_OF]->(s)
 
     WITH section, s, chunk, c
-    UNWIND chunk.tables AS table
-    MERGE (t:Table {id: table.id})
-    ON CREATE SET
-        t.caption = table.caption,
-        t.text = table.text,
-        t.description = table.description,
-        t.page = table.page
-    MERGE (c)-[:HAS_TABLE]->(t)
+    FOREACH (table IN chunk.tables |
+        MERGE (t:Table {id: table.id})
+        ON CREATE SET
+            t.caption = table.caption,
+            t.text = table.text,
+            t.description = table.description,
+            t.page = table.page
+        MERGE (c)-[:HAS_TABLE]->(t)
+    )
 
-    WITH section, s
-    UNWIND range(0, size(section.chunks) - 2) AS idx
-    MATCH (c1:Chunk {id: section.chunks[idx].id})
-    MATCH (c2:Chunk {id: section.chunks[idx + 1].id})
-    MERGE (c1)-[:NEXT]->(c2)
+    WITH DISTINCT s, c
+    ORDER BY s, c.position
+    WITH s, collect(c) AS sorted_nodes
+    CALL apoc.nodes.link(sorted_nodes, "NEXT")
 
     RETURN "OK" as answer
   ',

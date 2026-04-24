@@ -1,8 +1,17 @@
 import asyncio
 from typing import List
 
-from qdrant_client import AsyncQdrantClient, models
-
+from qdrant_client import AsyncQdrantClient
+from qdrant_client.models import (
+    PointStruct,
+    FieldCondition,
+    MatchPhrase,
+    Filter,
+    Prefetch,
+    FusionQuery,
+    Fusion,
+    ScoredPoint
+)
 from src.shared.schemas import EmbeddedArxivPaper
 
 
@@ -42,7 +51,7 @@ class QdrantRepository:
             chunks = [chunk for section in paper.sections for chunk in section.chunks]
 
             points = [
-                models.PointStruct(
+                PointStruct(
                     id=chunk.id,
                     vector=list(chunk.embedding),
                     payload={
@@ -55,7 +64,7 @@ class QdrantRepository:
             await asyncio.to_thread(lambda: self._client.upload_points(self._collection_name, points=points))
 
 
-    async def query(self, queries: List[List[float]], tags: List[str]) -> models.QueryResponse:
+    async def query(self, queries: List[List[float]], tags: List[str]) -> List[ScoredPoint]:
         """Performs a vector similarity search with tag-based filtering.
 
         Uses Reciprocal Rank Fusion (RRF) to combine results from multiple
@@ -70,17 +79,17 @@ class QdrantRepository:
             QueryResponse containing the most relevant points with payloads.
         """
         tags_filter = [
-            models.FieldCondition(
+            FieldCondition(
                 key="tags",
-                match=models.MatchPhrase(phrase=tag)
+                match=MatchPhrase(phrase=tag)
             )
             for tag in tags
         ]
-        should_filter = models.Filter(
+        should_filter = Filter(
             should=tags_filter,
         )
         prefetch = [
-            models.Prefetch(
+            Prefetch(
                 query=query,
                 filter=should_filter,
                 limit=20
@@ -88,12 +97,12 @@ class QdrantRepository:
             for query in queries
         ]
 
-        results = await self._client.query_points(
+        result = await self._client.query_points(
             collection_name=self._collection_name,
             prefetch=prefetch,
-            query=models.FusionQuery(fusion=models.Fusion.RRF),
+            query=FusionQuery(fusion=Fusion.RRF),
             with_payload=True,
             limit=5
         )
 
-        return results
+        return [point for point in result.points]

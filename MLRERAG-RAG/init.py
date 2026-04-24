@@ -43,15 +43,17 @@ async def init():
     )
 
     # Neo4j
-    drop_all_command = Path("./.init/neo4j/procedures/01_drop_old_procedures.cypher").read_text()
+    drop_all_command = Path(f"{settings.BASE_DIR}/.init/neo4j/procedures/01_drop_old_procedures.cypher").read_text()
     async with neo4j_client.session(database="system") as session:
         await session.execute_write(lambda tx: tx.run(drop_all_command))
 
-    create_paper_hierarchy_procedure = Path("./.init/neo4j/procedures/02_create_paper_hierarchy.cypher").read_text()
-    create_cites_links_procedure = Path("./.init/neo4j/procedures/03_create_cites_links.cypher").read_text()
+    create_paper_hierarchy_procedure = Path(f"{settings.BASE_DIR}/.init/neo4j/procedures/02_create_paper_hierarchy.cypher").read_text()
+    create_cites_links_procedure = Path(f"{settings.BASE_DIR}/.init/neo4j/procedures/03_create_cites_links.cypher").read_text()
+    extend_seeds_procedure = Path(f"{settings.BASE_DIR}/.init/neo4j/procedures/04_extend_seeds.cypher").read_text()
     async with neo4j_client.session(database=settings.GRAPH_DB_DATABASE) as session:
         await session.execute_write(lambda tx: tx.run(create_paper_hierarchy_procedure))
         await session.execute_write(lambda tx: tx.run(create_cites_links_procedure))
+        await session.execute_write(lambda tx: tx.run(extend_seeds_procedure))
 
 
 if __name__ == "__main__":
