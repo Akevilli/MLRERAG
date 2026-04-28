@@ -1,11 +1,13 @@
 from uuid import UUID
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, status
-from sqlalchemy.orm import Session
 
 from src.core import get_user_payload
-from src.services import ChatService, ChatPaginationSchema, ChatSchema
-from src.dependencies import get_chat_service, get_session
+from src.services import ChatService, ChatViewDTO
+from src.dependencies import get_chat_service
+from src.api.schemas import BasePaginationRequestSchema
+from src.shared.schemas import PaginationResponseDTO
 
 
 router = APIRouter()
@@ -14,28 +16,26 @@ router = APIRouter()
 @router.get(
     "/me",
     status_code=status.HTTP_200_OK,
-    response_model=ChatPaginationSchema
+    response_model=PaginationResponseDTO
 )
-def get_my_chats(
-    page: int,
+async def get_my_chats(
+    pagination_request: Annotated[BasePaginationRequestSchema, Depends()],
     chat_service: ChatService = Depends(get_chat_service),
     user_credentials: dict = Depends(get_user_payload),
-    session: Session = Depends(get_session)
 ):
-    chats = chat_service.get_chats(page, user_credentials, session)
+    chats = await chat_service.get_chats(pagination_request.to_dto(), user_credentials)
     return chats
 
 
 @router.get(
-    "/{id}",
+    "/{chat_id}",
     status_code=status.HTTP_200_OK,
-    response_model=ChatSchema
+    response_model=ChatViewDTO
 )
-def get_chat_by_id(
-    id: UUID,
+async def get_chat_by_id(
+    chat_id: UUID,
     chat_service: ChatService = Depends(get_chat_service),
     user_credentials: dict = Depends(get_user_payload),
-    session: Session = Depends(get_session)
 ):
-    chat = chat_service.get_by_id(id, user_credentials, session)
+    chat = await chat_service.get_by_id(chat_id, user_credentials)
     return chat

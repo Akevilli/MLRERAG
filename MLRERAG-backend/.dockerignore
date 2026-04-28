@@ -64,6 +64,9 @@ coverage.xml
 # Django stuff:
 *.log
 
+# logs
+.logs
+
 # Sphinx documentation
 docs/_build/
 
@@ -72,6 +75,7 @@ target/
 
 # Virtual environment
 .env
+.env.example
 .venv/
 venv/
 

@@ -10,7 +10,7 @@ routers = [
     (auth.router, "/auth", ["auth"]),
     (rag.router, "/rag", ["rag"]),
     (chats.router, "/chats", ["chats"]),
-    (messages.router, "/messages", ["messages"]),
+    (messages.router, "/chats/{chat_id}/messages", ["messages"]),
 ]
 
 for router, prefix, tags in routers:

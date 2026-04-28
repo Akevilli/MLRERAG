@@ -1,81 +1,92 @@
-import requests
-from sqlalchemy.orm import Session
+from httpx import AsyncClient
+from loguru import logger
 
 from src.core import settings, retry_strategy
-from src.api.schemas import RAGQuerySchema
+from src.shared.schemas import PaginationRequestDTO
 from src.services.redis import RedisService
-from src.services.chats import ChatService, CreateChatSchema, ChatSchema
-from src.services.messages import MessageService, CreateMessageSchema, MessageSchema
-from .schemas import RAGResponseSchema, RAGRServiceResponseSchema
+from src.services.chats import ChatService, CreateChatDTO
+from src.services.messages import MessageService, BaseMessageDTO, CreateMessageDTO
+from .schemas import RAGRequestDTO, RAGResponseDTO, RAGRServiceResponseDTO
 
 
 class RAGService:
     def __init__(
         self,
+        httpx_client: AsyncClient,
         chat_service: ChatService,
         message_service: MessageService,
         redis_service: RedisService,
     ):
-        self.__chat_service = chat_service
-        self.__message_service = message_service
-        self.__redis_service = redis_service
+        self._httpx_client = httpx_client
+        self._chat_service = chat_service
+        self._message_service = message_service
+        self._redis_service = redis_service
 
 
     @retry_strategy
-    def generate_answer(
+    async def generate_answer(
         self,
-        query: RAGQuerySchema,
+        request: RAGRequestDTO,
         user_credentials: dict,
-        session: Session
-    ) -> RAGRServiceResponseSchema | dict:
-        messages: list[MessageSchema] = []
+    ) -> RAGRServiceResponseDTO | dict:
+        is_new_chat = False
 
-        if query.chat_id is not None:
-            messages = self.__redis_service.get_messages(query.chat_id)
+        if request.chat_id is None:
+            is_new_chat = True
+            current_chat = await self._chat_service.create(
+                CreateChatDTO(
+                    title=" ".join(request.query.split()[:25]),
+                    owner_id=user_credentials["user_id"]
+                )
+            )
+        else:
+            current_chat = await self._chat_service.get_by_id(request.chat_id, user_credentials)
+
+        messages = []
+
+        if not is_new_chat:
+            messages = await self._redis_service.get_messages(current_chat.id)
             if messages is None:
-                messages = self.__message_service.get_latest_chat_messages(
-                    query.chat_id,
+                pagination_request = PaginationRequestDTO(
+                    page=0,
+                    page_size=settings.CONTEXT_WINDOW,
+                    sort="desc"
+                )
+                messages = (await self._message_service.get_chat_messages(
+                    current_chat.id,
+                    pagination_request,
                     user_credentials,
-                    session
-                ).items
-                self.__redis_service.append_messages(query.chat_id, messages)
+                )).items
+                await self._redis_service.append_messages(current_chat.id, messages)
 
-        user_message = MessageSchema(content=query.prompt, is_users=True)
+        user_message = BaseMessageDTO(text=request.query, type="user", chat_id=current_chat.id)
+        user_message = await self._message_service.create(CreateMessageDTO(**user_message.model_dump()))
         messages.append(user_message)
 
-        response = requests.post(
+        response = await self._httpx_client.post(
             url=settings.RAG_SERVICE_URL + "/rag/generate_answer",
-            json={"messages": [message.model_dump() for message in messages]},
+            json={"messages": [message.model_dump(exclude={"id", "chat_id"}) for message in messages]},
+            timeout=None
         )
 
         if response.status_code != 200:
             return response.json()
 
-        result = RAGResponseSchema(**response.json())
-        model_message = MessageSchema(content=result.answer, is_users=False)
+        result = RAGResponseDTO.model_validate(response.json())
+        logger.info(f"RAG response: {result}")
 
-        if query.chat_id is not None:
-            chat = self.__chat_service.get_by_id(query.chat_id, user_credentials, session)
-        else:
-            chat = self.__chat_service.create(CreateChatSchema(
-                title=" ".join(result.answer.split()[:4]),
-                owner_id=user_credentials["user_id"],
-            ), session)
-
-        self.__message_service.create(
-            CreateMessageSchema(content=query.prompt, chat_id=chat.id, is_users=True),
-            session
-        )
-        self.__message_service.create(
-            CreateMessageSchema(content=result.answer, chat_id=chat.id, is_users=False),
-            session
+        model_message = await self._message_service.create(
+            CreateMessageDTO(
+                text=result.messages[-1].text,
+                chat_id=current_chat.id,
+                type="assistant"
+            )
         )
 
-        self.__redis_service.append_messages(chat.id, [user_message, model_message])
+        await self._redis_service.append_messages(current_chat.id, [user_message, model_message])
 
-        return RAGRServiceResponseSchema(
-            answer=result.answer,
-            documents=result.documents,
-            chat=ChatSchema.model_validate(chat)
+        return RAGRServiceResponseDTO(
+            messages=result.messages,
+            chat=current_chat
         )
 

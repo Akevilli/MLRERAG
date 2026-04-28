@@ -1,24 +1,16 @@
 from uuid import UUID
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
-
-
-class CreateMessageSchema(BaseModel):
-    content: str
-    is_users: bool
-    chat_id: UUID
+from pydantic import BaseModel, Field
 
 
-class MessageSchema(BaseModel):
-    model_config = ConfigDict(
-        from_attributes=True
-    )
+class BaseMessageDTO(BaseModel):
+    text: str = Field(description="Text of the message.")
+    type: Literal["assistant", "user"] = Field(description="Type of the message.")
+    chat_id: UUID = Field(description="Chat identifier of the message.")
 
-    content: str
-    is_users: bool
+class MessageViewDTO(BaseMessageDTO):
+    id: UUID = Field(description="Identifier of the message.")
 
-
-class MessagePaginationSchema(BaseModel):
-    items: list[MessageSchema]
-    page: int
-    total: int
+class CreateMessageDTO(BaseMessageDTO):
+    pass

@@ -1,9 +1,14 @@
 from fastapi import APIRouter, Depends, status
-from sqlalchemy.orm import Session
 
-from src.dependencies import get_session, get_rag_service
-from ..schemas import UploadSchema, UploadResponseSchema, QuerySchema, QueryResponseSchema
-from src.services.rag import RAGService
+from src.dependencies import get_uploading_orchestrator, get_retrieving_orchestrator
+from ..schemas import (
+    PaperUploadRequest,
+    PaperUploadResponse,
+    GenerateAnswerRequest,
+    GenerateAnswerResponse
+)
+from src.services.uploading import PaperIngestionService
+from src.services.retrieving import RetrievingService
 
 router = APIRouter()
 
@@ -11,26 +16,25 @@ router = APIRouter()
 @router.put(
     "/upload",
     status_code=status.HTTP_201_CREATED,
-    response_model=UploadResponseSchema
+    response_model=PaperUploadResponse
 )
-def upload(
-    upload_data: UploadSchema,
-    _rag_service: RAGService = Depends(get_rag_service),
-    _session: Session = Depends(get_session)
+async def upload(
+    upload_data: PaperUploadRequest,
+    _rag_service: PaperIngestionService = Depends(get_uploading_orchestrator),
 ):
-    uploaded_documents = _rag_service.upload(upload_data, session=_session)
+    response = await _rag_service.process(upload_data.to_dto())
 
-    return uploaded_documents
+    return response
 
 
 @router.post(
     "/generate_answer",
     status_code=status.HTTP_200_OK,
-    response_model=QueryResponseSchema
+    response_model=GenerateAnswerResponse
 )
-def generate_answer(
-    query: QuerySchema,
-    _rag_service: RAGService = Depends(get_rag_service),
+async def generate_answer(
+    query: GenerateAnswerRequest,
+    _rag_service: RetrievingService = Depends(get_retrieving_orchestrator),
 ):
-    response = _rag_service.generate_answer(query)
+    response = await _rag_service.generate_answer(query.to_dto())
     return response

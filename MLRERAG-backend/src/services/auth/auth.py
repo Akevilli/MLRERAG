@@ -1,19 +1,24 @@
 import bcrypt
-from sqlalchemy.orm import Session
 from fastapi.exceptions import HTTPException
-from email_validator import validate_email, EmailNotValidError
+from loguru import logger
 
-from src.core import retry_strategy
-from src.services import UserService, EmailService, TokenService
-from src.api.schemas import (
-    CreateUserSchema, 
-    ActivateUserSchema, 
-    LoginUserSchema,
-    LoggedUserView,
-    UpdateJWTSchema,
-    RefreshJWTSchema
+from .schemas import (
+    RegisterUserDTO,
+    ActivateUserDTO,
+    LoginUserResponseDTO,
+    LoginUserDTO,
+    RefreshJWTDTO,
+    RefreshJWTResponseDTO
 )
-from src.models import User
+from src.core import retry_strategy
+from src.services import (
+    UserService,
+    EmailService,
+    TokenService,
+    UserCreateDTO,
+    UserUpdateDTO,
+    UserViewDTO
+)
 
 
 class AuthService:
@@ -22,99 +27,71 @@ class AuthService:
             user_service: UserService,
             email_service: EmailService,
             token_service: TokenService
-        ):
-        self.__user_service = user_service
-        self.__email_service = email_service
-        self.__token_service = token_service
+    ):
+        self._user_service = user_service
+        self._email_service = email_service
+        self._token_service = token_service
 
+    # @retry_strategy
+    async def register(self, new_user_data_schema: RegisterUserDTO) -> UserViewDTO:
+        new_user_data = new_user_data_schema.model_dump()
 
-    @retry_strategy
-    def register(self, new_user_data: CreateUserSchema, session: Session) -> User:
-        new_user_data_dict = new_user_data.model_dump()
-
-        if new_user_data_dict["password"] != new_user_data_dict["confirm_password"]:
+        if new_user_data["password"] != new_user_data["confirm_password"]:
             raise HTTPException(400, "Passwords and Confirm password do not match!")
 
-        token, hashed_token = self.__token_service.generate_activation_token()
+        token, hashed_token = self._token_service.generate_activation_token()
 
-        new_user_data_dict["activation_token"] = hashed_token
-        new_user_data_dict['password'] = bcrypt.hashpw(bytes(new_user_data_dict["password"], "utf-8"), bcrypt.gensalt())
+        new_user_data["activation_token"] = hashed_token
+        new_user_data["password"] = bcrypt.hashpw(new_user_data_schema.password.encode(), bcrypt.gensalt())
 
-        new_user = User(
-            username=new_user_data_dict["username"],
-            email=new_user_data_dict["email"],
-            password=new_user_data_dict["password"],
-            activation_token=new_user_data_dict["activation_token"],
-        )
+        new_user = UserCreateDTO(**new_user_data)
+        new_user = await self._user_service.create_user(new_user)
+        logger.info(f"New user was created: {new_user.email}")
 
-        new_user = self.__user_service.create_user(new_user, session)
-
-        self.__email_service.sent_welcome_email(new_user_data_dict["email"], token)
+        await self._email_service.sent_welcome_email(str(new_user.email), token)
+        logger.info(f"Welcome email was sent to: {new_user.email}")
 
         return new_user
 
-
     @retry_strategy
-    def activate(self, user_data: ActivateUserSchema, session: Session) -> None:
-        
-        try:
-            validate_email(user_data.login, check_deliverability=False)
-            user = self.__user_service.get_by_email(user_data.login, session)
-        except EmailNotValidError:
-            user = self.__user_service.get_by_username(user_data.login, session)
-        
-        if not bcrypt.checkpw(bytes(user_data.activation_token, "utf-8"), user.activation_token):
+    async def activate(self, activate_user_dto: ActivateUserDTO) -> None:
+        user_view = await self._user_service.get_by_login(activate_user_dto.login)
+
+        if not await self._user_service.check_activation_token(user_view.id, activate_user_dto.activation_token):
             raise HTTPException(400, "The provided activation token is invalid or incorrect.")
-        
-        user.is_activated = True
 
+        update_user_schema = UserUpdateDTO(is_activated=True)
+        await self._user_service.update_user(user_view.id, update_user_schema)
 
     @retry_strategy
-    def login(self, user_data: LoginUserSchema, session : Session) -> LoggedUserView:
+    async def login(self, login_schema: LoginUserDTO) -> LoginUserResponseDTO:
+        user_view = await self._user_service.get_by_login(login_schema.login)
 
-        try:
-            validate_email(user_data.login, check_deliverability=False)
-            user = self.__user_service.get_by_email(user_data.login, session)
-        except EmailNotValidError:
-            try:
-                user = self.__user_service.get_by_username(user_data.login, session)
-            except HTTPException:
-                raise HTTPException(404,"Invalid username/email or password.")
-        except HTTPException:
-            raise HTTPException(404, "Invalid username/email or password.")
-
-        if not user.is_activated:
+        if not user_view.is_activated:
             raise HTTPException(403, "User doesn't have required permission for login.")
 
-        if not bcrypt.checkpw(bytes(user_data.password, "utf-8"), user.password):
+        if not await self._user_service.check_password(user_view.id, login_schema.password):
             raise HTTPException(404, "Invalid username/email or password.")
 
-        jwt_token = self.__token_service.generate_jwt_token(user)
-        refresh_token = self.__token_service.create_refresh_token(user.id, session)
+        jwt_token = self._token_service.generate_jwt_token(user_view.id)
+        refresh_token = await self._token_service.create_refresh_token(user_view.id)
 
-        result = LoggedUserView(
-            id=user.id,
-            username=user.username,
-            email=user.email,
-            created_at=user.created_at,
-            updated_at=user.updated_at,
+        result = LoginUserResponseDTO(
+            **user_view.model_dump(),
             access_token=jwt_token,
             refresh_token=refresh_token.id
         )
 
         return result
 
-
     @retry_strategy
-    def refresh_jwt(self, update_jwt: UpdateJWTSchema, session: Session) -> RefreshJWTSchema:
-        if not self.__token_service.check_refresh_token(**update_jwt.model_dump(), session=session):
+    async def refresh_jwt(self, refresh_jwt_request_dto: RefreshJWTDTO) -> RefreshJWTResponseDTO:
+        if not await self._token_service.check_refresh_token(**refresh_jwt_request_dto.model_dump()):
             raise HTTPException(403, "Refresh token is invalid.")
 
-        user = self.__user_service.get_by_id(update_jwt.user_id, session=session)
+        user_view = await self._user_service.get_by_id(refresh_jwt_request_dto.user_id)
 
-        jwt_token = self.__token_service.generate_jwt_token(user)
-        refresh_token = self.__token_service.create_refresh_token(user.id, session)
+        jwt_token = self._token_service.generate_jwt_token(user_view.id)
+        refresh_token = await self._token_service.create_refresh_token(user_view.id)
 
-        return RefreshJWTSchema(access_token=jwt_token, refresh_token=refresh_token.id)
-
-        
+        return RefreshJWTResponseDTO(access_token=jwt_token, refresh_token=refresh_token.id)

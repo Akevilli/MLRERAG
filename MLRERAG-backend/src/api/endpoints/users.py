@@ -1,13 +1,9 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
-from sqlalchemy.orm import Session
 
-from src.dependencies import get_user_service, get_session
-from src.services import UserService
-from src.models import User
-from ..schemas import UserViewSchema
-
+from src.dependencies import get_user_service
+from src.services import UserService, UserViewDTO
 
 router = APIRouter()
 
@@ -15,26 +11,24 @@ router = APIRouter()
 @router.get(
     "/{username}",
     status_code=status.HTTP_200_OK,
-    response_model=UserViewSchema
+    response_model=UserViewDTO
 )
-def get_user_by_username(
+async def get_user_by_username(
         username: str,
         user_service: UserService = Depends(get_user_service),
-        session: Session = Depends(get_session),
-    ):
-    user: User = user_service.get_by_username(username, session)
+):
+    user = await user_service.get_by_username(username)
     return user
 
 
 @router.get(
-    "/{id}",
+    "/{user_id}",
     status_code=status.HTTP_200_OK,
-    response_model=UserViewSchema
+    response_model=UserViewDTO
 )
-def get_user_by_id(
-        id: UUID,
+async def get_user_by_id(
+        user_id: UUID,
         user_service: UserService = Depends(get_user_service),
-        session: Session = Depends(get_session),
     ):
-    user: User = user_service.get_by_id(id, session)
+    user = await user_service.get_by_id(user_id)
     return user

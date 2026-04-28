@@ -1,10 +1,12 @@
-from pydantic import BaseModel
+from typing import Literal, Optional, List
+
+from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file="../.env",
+        env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore"
     )
@@ -21,41 +23,42 @@ class Chat(BaseModel):
     id: str | None = None
     title: str | None = None
 
-
 class Message(BaseModel):
-    content: str
-    is_users: bool
-
-
-class User(BaseModel):
-    id: str
-    username: str
-    email: str
-    access_token: str
-    refresh_token: str
-
-
-class GeneratedResponse(BaseModel):
-    answer: str
-    documents: str
-    chat: Chat
-
+    text: str
+    type: Literal["user", "tool", "assistant"]
 
 class TokensSchema(BaseModel):
     access_token: str
     refresh_token: str
 
+class User(TokensSchema):
+    id: str
+    username: str
+    email: str
+
+class GeneratedResponse(BaseModel):
+    messages: List[Message]
+    chat: Chat
+
+class PaginationRequest(BaseModel):
+    page: int = Field(description="Current page number", ge=0)
+    page_size: int = Field(description="Number of items in a single page", ge=0)
+    sort: Literal["asc", "desc"] = Field(description="Sort order")
+
+
+class PaginationMetadata(BaseModel):
+    total: int = Field(description="Total items", ge=0)
+    next: Optional[PaginationRequest] = Field(description="Url to next page")
+    previous: Optional[PaginationRequest] = Field(description="Url to previous page")
 
 class PaginatedAPIResponse[T: BaseModel](BaseModel):
-    items: list[T]
-    page: int
-    total: int
+    items: List[T]
+    metadata: PaginationMetadata
 
-
-class Response[T: BaseModel | None](BaseModel):
-    message: str | None
+class Response[T: Optional[BaseModel]](BaseModel):
+    message: Optional[str]
     is_success: bool
-    data: T | None
+    data: Optional[T]
 
     @classmethod
     def success(cls, data: T, message: str = None) -> "Response":
