@@ -12,6 +12,15 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
 
+    env:
+      NEO4J_PASSWORD: ${{ secrets.NEO4J_PASSWORD }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+      RAG_USER: ${{ secrets.RAG_USER }}
+      RAG_PASSWORD: ${{ secrets.RAG_PASSWORD }}
+      BACKEND_USER: ${{ secrets.BACKEND_USER }}
+      BACKEND_PASSWORD: ${{ secrets.BACKEND_PASSWORD }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
