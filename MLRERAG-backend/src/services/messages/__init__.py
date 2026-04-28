@@ -1,2 +1,2 @@
 from .messages import MessageService
-from .schemas import CreateMessageSchema, MessagePaginationSchema, MessageSchema
+from .schemas import BaseMessageDTO, MessageViewDTO, CreateMessageDTO

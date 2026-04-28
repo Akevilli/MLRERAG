@@ -1,17 +1,17 @@
-from logging import Logger
-
 from fastapi import Depends, APIRouter, status
-from sqlalchemy.orm import Session
+from loguru import logger
 
-from src.services import AuthService
-from src.dependencies import get_session, get_auth_service, get_logger
+from src.services import (
+    AuthService,
+    LoginUserResponseDTO,
+    RefreshJWTResponseDTO
+)
+from src.dependencies import get_auth_service
 from src.api.schemas import (
-    CreateUserSchema, 
-    ActivateUserSchema,
-    LoginUserSchema,
-    LoggedUserView,
-    RefreshJWTSchema,
-    UpdateJWTSchema
+    CreateUserRequestSchema,
+    ActivateUserRequestSchema,
+    LoginUserRequestSchema,
+    RefreshJWTRequestSchema,
 )
 
 
@@ -22,57 +22,49 @@ router = APIRouter()
     "/register",
     status_code=status.HTTP_201_CREATED
 )
-def register(
-    new_user_data: CreateUserSchema,
+async def register(
+    new_user_data: CreateUserRequestSchema,
     auth_service: AuthService = Depends(get_auth_service),
-    session: Session = Depends(get_session),
-    logger: Logger = Depends(get_logger)
 ) -> None:
-    user = auth_service.register(new_user_data, session)
-    logger.info(f"New user created: {user.username}:{user.email}")
+    user = await auth_service.register(new_user_data.to_dto())
+    logger.info(f"New user was created: {user.username}/{user.email}")
 
 
 @router.post(
     "/activate",
     status_code=status.HTTP_200_OK
 )
-def activate(
-    activate_user_data: ActivateUserSchema,
+async def activate(
+    activate_user_data: ActivateUserRequestSchema,
     auth_service: AuthService = Depends(get_auth_service),
-    session: Session = Depends(get_session),
-    logger: Logger = Depends(get_logger)
 ) -> None:
-    auth_service.activate(activate_user_data, session)
+    await auth_service.activate(activate_user_data.to_dto())
     logger.info(f"Activated user: {activate_user_data.login}")
 
 
 @router.post(
     "/login",
     status_code=status.HTTP_200_OK,
-    response_model=LoggedUserView
+    response_model=LoginUserResponseDTO
 )
-def login(
-    login_user_data: LoginUserSchema,
+async def login(
+    login_user_data: LoginUserRequestSchema,
     auth_service: AuthService = Depends(get_auth_service),
-    session: Session = Depends(get_session),
-    logger: Logger = Depends(get_logger)
 ):
-    logged_user = auth_service.login(login_user_data, session)
-    logger.info(f"Login user: {logged_user.username}:{logged_user.email}")
-    return logged_user
+    logged_in_user = await auth_service.login(login_user_data.to_dto())
+    logger.info(f"User logged in: {logged_in_user.username}/{logged_in_user.email}")
+    return logged_in_user
 
 
 @router.post(
     "/refresh",
     status_code=status.HTTP_201_CREATED,
-    response_model=RefreshJWTSchema
+    response_model=RefreshJWTResponseDTO
 )
-def refresh(
-    update_jwt_schema: UpdateJWTSchema,
+async def refresh(
+    update_jwt_schema: RefreshJWTRequestSchema,
     auth_service: AuthService = Depends(get_auth_service),
-    session: Session = Depends(get_session),
-    logger: Logger = Depends(get_logger)
 ):
-    response = auth_service.refresh_jwt(update_jwt_schema, session)
+    response = await auth_service.refresh_jwt(update_jwt_schema.to_dto())
     logger.info(f"User: {update_jwt_schema.user_id} updated jwt token.")
     return response
