@@ -1,24 +1,23 @@
-FROM python:3.13.9-trixie AS builder
+FROM astral/uv:python3.12-bookworm-slim AS builder
 
+ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 WORKDIR /app
 
-COPY requirements.txt .
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    uv sync --frozen --no-install-project --no-dev
 
-RUN pip install --prefix=/install --no-cache-dir \
-    --extra-index-url https://download.pytorch.org/whl/cpu \
-    -r requirements.txt
-
-
-FROM python:3.13.9-slim-trixie AS final
+FROM python:3.12-slim-bookworm AS final
 
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y libpq-dev gcc
 
-COPY --from=builder /install /usr/local
+COPY --from=builder /app/.venv /app/.venv
+
+ENV PATH="/app/.venv/bin:$PATH"
 
 COPY . .
 
-ENV PYTHONPATH=/app
-
-CMD ["uvicorn", "init.py && main:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["sh", "-c", "python init.py && python main.py"]
