@@ -1,17 +1,20 @@
-FROM python:3.13.9-trixie AS builder
+FROM astral/uv:python3.12-bookworm-slim AS builder
+
+ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
+WORKDIR /app
+
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    uv sync --frozen --no-install-project --no-dev
+
+FROM python:3.12-slim-bookworm AS final
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY --from=builder /app/.venv /app/.venv
 
-RUN pip install --prefix=/install --no-cache-dir -r requirements.txt
-
-
-FROM python:3.13.9-slim-trixie AS final
-
-WORKDIR /app
-
-COPY --from=builder /install /usr/local
+ENV PATH="/app/.venv/bin:$PATH"
 
 COPY . .
 

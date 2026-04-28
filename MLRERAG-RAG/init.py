@@ -15,32 +15,32 @@ async def init():
         await conn.run_sync(Base.metadata.create_all)
 
     # Qdrant
-    await qdrant_client.delete_collection(collection_name=settings.VECTOR_DB_COLLECTION)
-    await qdrant_client.create_collection(
-        collection_name=settings.VECTOR_DB_COLLECTION,
-        vectors_config=models.VectorParams(
-            size=settings.EMBEDDING_DIM,
-            distance=models.Distance.COSINE,
-            on_disk=True
-        ),
-        hnsw_config=models.HnswConfigDiff(
-            on_disk=True,
-            m=16,
-            ef_construct=160,
+    if not await qdrant_client.collection_exists(settings.VECTOR_DB_COLLECTION):
+        await qdrant_client.create_collection(
+            collection_name=settings.VECTOR_DB_COLLECTION,
+            vectors_config=models.VectorParams(
+                size=settings.EMBEDDING_DIM,
+                distance=models.Distance.COSINE,
+                on_disk=True
+            ),
+            hnsw_config=models.HnswConfigDiff(
+                on_disk=True,
+                m=16,
+                ef_construct=160,
+            )
         )
-    )
 
-    await qdrant_client.create_payload_index(
-        collection_name=settings.VECTOR_DB_COLLECTION,
-        field_name="tags",
-        field_schema=models.TextIndexParams(
-            on_disk=True,
-            type=models.TextIndexType.TEXT,
-            tokenizer=models.TokenizerType.WORD,
-            lowercase=True,
-            phrase_matching=True,
-        ),
-    )
+        await qdrant_client.create_payload_index(
+            collection_name=settings.VECTOR_DB_COLLECTION,
+            field_name="tags",
+            field_schema=models.TextIndexParams(
+                on_disk=True,
+                type=models.TextIndexType.TEXT,
+                tokenizer=models.TokenizerType.WORD,
+                lowercase=True,
+                phrase_matching=True,
+            ),
+        )
 
     # Neo4j
     drop_all_command = Path(f"{settings.BASE_DIR}/.init/neo4j/procedures/01_drop_old_procedures.cypher").read_text()

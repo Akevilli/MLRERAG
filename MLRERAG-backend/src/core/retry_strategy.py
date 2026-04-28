@@ -1,4 +1,3 @@
-from requests import RequestException
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception
 from fastapi import HTTPException
 from email_validator import EmailNotValidError

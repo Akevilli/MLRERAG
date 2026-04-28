@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from fastapi import APIRouter, Depends, status
 
 from src.dependencies import get_uploading_orchestrator, get_retrieving_orchestrator

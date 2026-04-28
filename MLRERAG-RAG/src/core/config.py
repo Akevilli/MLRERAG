@@ -7,20 +7,17 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     """Application configuration settings loaded from environment variables."""
     model_config = SettingsConfigDict(
-        env_file="../.env",
+        env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore"
     )
 
     BASE_DIR: Path = Path(__file__).parent.parent.parent
 
-    RAG_PORT: int
+    PORT: int
     BATCH_SIZE: int
     CHUNK_SIZE: int
     OVERLAP: int
-
-    # Llama
-    LLAMA_PARSER_API_KEY: str
 
     # Ollama
     OLLAMA_HOST: str
@@ -55,9 +52,6 @@ class Settings(BaseSettings):
 
     TAGGER_MODEL: str
     TAGGER_API_KEY: str
-
-    RERANKER_NAME: str
-    RERANKER_DEVICE: str
 
     # API_KEYS
     GROK_API_KEY: str
