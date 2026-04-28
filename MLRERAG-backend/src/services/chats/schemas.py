@@ -1,23 +1,14 @@
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, Field
 
 
-class CreateChatSchema(BaseModel):
-    title: str
-    owner_id: UUID
+class ChatBaseDTO(BaseModel):
+    title: str = Field(description="Chat title.")
+    owner_id: UUID = Field(description="Chat owner's identifier.")
 
+class CreateChatDTO(ChatBaseDTO):
+    pass
 
-class ChatSchema(BaseModel):
-    model_config = ConfigDict(
-        from_attributes=True
-    )
-
-    id: UUID
-    title: str
-
-
-class ChatPaginationSchema(BaseModel):
-    items: list[ChatSchema]
-    page: int
-    total: int
+class ChatViewDTO(ChatBaseDTO):
+    id: UUID = Field(description="Chat identifier.")

@@ -1,4 +1,4 @@
-from redis import ConnectionPool
+from redis.asyncio import ConnectionPool
 
 from src.core import settings
 

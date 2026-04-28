@@ -8,6 +8,8 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
+    BACKEND_PORT: int
+
     POSTGRES_HOST: str
     POSTGRES_PORT: str
     POSTGRES_USER_BACKEND: str
@@ -39,7 +41,7 @@ class Settings(BaseSettings):
 
     @property
     def SQLALCHEMY_DATABASE_URI(self):
-        return (f"postgresql+psycopg2://{self.POSTGRES_USER_BACKEND}:{self.POSTGRES_PASSWORD_BACKEND}@"
+        return (f"postgresql+asyncpg://{self.POSTGRES_USER_BACKEND}:{self.POSTGRES_PASSWORD_BACKEND}@"
                 f"{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DATABASE}")
 
     @property

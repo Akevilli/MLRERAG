@@ -5,9 +5,15 @@ from typing import Annotated
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
 
 from src.core import settings
+from src.services.auth import (
+    ActivateUserDTO,
+    RegisterUserDTO,
+    LoginUserDTO,
+    RefreshJWTDTO
+)
 
 
-class CreateUserSchema(BaseModel):
+class CreateUserRequestSchema(BaseModel):
     model_config = ConfigDict(
         regex_engine="python-re"
     )
@@ -21,29 +27,32 @@ class CreateUserSchema(BaseModel):
     )]
     confirm_password: str
 
+    def to_dto(self) -> RegisterUserDTO:
+        return RegisterUserDTO(**self.model_dump())
 
-class ActivateUserSchema(BaseModel):
 
+class ActivateUserRequestSchema(BaseModel):
     login: EmailStr | str
     activation_token: Annotated[str, Field(
         min_length=settings.ACTIVATION_TOKEN_LENGTH + 2,
         max_length=settings.ACTIVATION_TOKEN_LENGTH + 2
     )]
 
+    def to_dto(self) -> ActivateUserDTO:
+        return ActivateUserDTO(**self.model_dump())
 
-class LoginUserSchema(BaseModel):
 
+class LoginUserRequestSchema(BaseModel):
     login: EmailStr | str
     password: str
 
+    def to_dto(self) -> LoginUserDTO:
+        return LoginUserDTO(**self.model_dump())
 
-class UpdateJWTSchema(BaseModel):
 
+class RefreshJWTRequestSchema(BaseModel):
     user_id: UUID
     refresh_token: UUID
 
-
-class RefreshJWTSchema(BaseModel):
-
-    refresh_token: UUID
-    access_token: str
+    def to_dto(self) -> RefreshJWTDTO:
+        return RefreshJWTDTO(**self.model_dump())

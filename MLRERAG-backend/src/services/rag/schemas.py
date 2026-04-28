@@ -1,12 +1,21 @@
-from src.services.chats import ChatSchema
+from uuid import UUID
+from typing import Optional, Literal, List
 
-from pydantic import BaseModel
+from src.services.chats import ChatViewDTO
 
-
-class RAGResponseSchema(BaseModel):
-    answer: str
-    documents: str
+from pydantic import BaseModel, Field
 
 
-class RAGRServiceResponseSchema(RAGResponseSchema):
-    chat: ChatSchema
+class RAGRequestDTO(BaseModel):
+    query: str = Field(description="User's query.")
+    chat_id: Optional[UUID] = Field(description="Chat identifier.")
+
+class RAGMessageDTO(BaseModel):
+    text: str = Field(description="Text of the message.")
+    type: Literal["assistant", "tool"] = Field(description="Type of the message.")
+
+class RAGResponseDTO(BaseModel):
+    messages: List[RAGMessageDTO]
+
+class RAGRServiceResponseDTO(RAGResponseDTO):
+    chat: ChatViewDTO

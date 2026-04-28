@@ -1,4 +1,8 @@
-from .users import UserViewSchema, LoggedUserView
-from .auth import CreateUserSchema, ActivateUserSchema, LoginUserSchema, RefreshJWTSchema, UpdateJWTSchema
-
+from .auth import (
+    CreateUserRequestSchema,
+    ActivateUserRequestSchema,
+    LoginUserRequestSchema,
+    RefreshJWTRequestSchema
+)
 from .rag import RAGQuerySchema
+from .base import BasePaginationRequestSchema

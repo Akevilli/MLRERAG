@@ -3,6 +3,7 @@ import traceback
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
+from loguru import logger
 
 
 class ErrorHandler:
@@ -10,16 +11,14 @@ class ErrorHandler:
     Centralized error handler for FastAPI that provides informative and consistent error responses.
     """
 
-    def __init__(self, app: FastAPI, logger) -> None:
+    def __init__(self, app: FastAPI) -> None:
         """
         Initializes the ErrorHandler and registers error handlers.
 
         Args:
             app: FastAPI application instance.
-            logger: Logger instance used to record error details.
         """
         self._register_error_handlers(app)
-        self._logger = logger
 
     @staticmethod
     def _error_response(
@@ -78,7 +77,7 @@ class ErrorHandler:
             Returns:
                 JSONResponse: JSON response describing the HTTP error.
             """
-            self._logger.warning(f"HTTP error at {request.url.path}: {exc.detail}")
+            logger.warning(f"HTTP error at {request.url.path}: {exc.detail}")
 
             response = self._error_response(
                 request=request,
@@ -101,7 +100,7 @@ class ErrorHandler:
             Returns:
                 JSONResponse: JSON response describing the validation error.
             """
-            self._logger.debug(f"Validation error: {exc.errors()}")
+            logger.debug(f"Validation error: {exc.errors()}")
 
             response = self._error_response(
                 request=request,
@@ -125,7 +124,7 @@ class ErrorHandler:
             Returns:
                 JSONResponse: JSON response describing the value error.
             """
-            self._logger.warning(f"Value error: {exc}")
+            logger.warning(f"Value error: {exc}")
 
             response = self._error_response(
                 request=request,
@@ -150,7 +149,7 @@ class ErrorHandler:
             """
             # Generate traceback and log error
             traceback_str = ''.join(traceback.format_exception(type(exc), exc, exc.__traceback__))
-            self._logger.error(f"Unhandled exception at {request.url.path}: {exc}\n{traceback_str}")
+            logger.error(f"Unhandled exception at {request.url.path}: {exc}\n{traceback_str}")
 
             response = self._error_response(
                 request=request,
