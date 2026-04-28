@@ -116,14 +116,15 @@ def get_chat_by_id(chat_id: str) -> Response[Chat]:
     return Response.success(Chat.model_validate(response_data))
 
 
-def get_latest_messages(chat_id: str) -> Response[PaginatedAPIResponse[Message]]:
+def get_messages(chat_id: str, request: PaginationRequest) -> Response[PaginatedAPIResponse[Message]]:
     check_jwt()
     response = session.get(
-        f"{settings.API_URL}/api/messages/chats/{chat_id}",
+        f"{settings.API_URL}/api/chats/{chat_id}/messages",
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {st.session_state['user'].access_token}"
         },
+        params=request.model_dump()
     )
 
     response_data = response.json()
@@ -137,7 +138,7 @@ def get_latest_messages(chat_id: str) -> Response[PaginatedAPIResponse[Message]]
     )
 
 
-def get_users_chats(page: int) -> Response[PaginatedAPIResponse[Chat]]:
+def get_users_chats(request: PaginationRequest) -> Response[PaginatedAPIResponse[Chat]]:
     check_jwt()
     response = session.get(
         f"{settings.API_URL}/api/chats/me",
@@ -145,9 +146,7 @@ def get_users_chats(page: int) -> Response[PaginatedAPIResponse[Chat]]:
             "Content-Type": "application/json",
             "Authorization": f"Bearer {st.session_state['user'].access_token}",
         },
-        params={
-            "page": page,
-        }
+        params=request.model_dump()
     )
 
     response_data = response.json()
@@ -166,7 +165,7 @@ def generate_answer(prompt: str, chat_id: str | None) -> Response[GeneratedRespo
     response = session.put(
         f"{settings.API_URL}/api/rag",
         json={
-            "prompt": prompt,
+            "query": prompt,
             "chat_id": chat_id,
         },
         headers={

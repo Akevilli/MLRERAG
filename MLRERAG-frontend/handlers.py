@@ -1,4 +1,5 @@
 from api import *
+from schemas import PaginationRequest, PaginatedAPIResponse
 
 
 def login_handler():
@@ -51,8 +52,11 @@ def reset_current_chat():
     st.session_state["current_chat"] = Chat()
     st.session_state["messages"] = PaginatedAPIResponse[Message](
         items=[],
-        page=0,
-        total=0
+        metadata=PaginationMetadata(
+            total=0,
+            next=None,
+            previous=None,
+        )
     )
 
 
@@ -65,7 +69,7 @@ def change_chat_handler(chat_id: str):
 
     st.session_state["current_chat"] = chat_response.data
 
-    message_response = get_latest_messages(chat_id)
+    message_response = get_messages(chat_id, PaginationRequest(page=0, page_size=20, sort="asc"))
 
     if not message_response.is_success:
         st.error(message_response.message)
@@ -74,8 +78,8 @@ def change_chat_handler(chat_id: str):
     st.session_state["messages"] = message_response.data
 
 
-def get_user_chats(page: int):
-    response = get_users_chats(page)
+def get_user_chats(request: PaginationRequest):
+    response = get_users_chats(request)
 
     if not response.is_success:
         st.error(response.message)
@@ -94,6 +98,5 @@ def generate_response(prompt: str, chat_id: str | None) -> GeneratedResponse | N
     if st.session_state["current_chat"].id is None:
         chat = Chat.model_validate(response.data.chat)
         st.session_state["current_chat"] = chat
-        get_user_chats(0)
 
     return response.data
