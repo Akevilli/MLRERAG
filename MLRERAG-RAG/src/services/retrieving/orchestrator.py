@@ -2,7 +2,7 @@ from typing import List
 
 import yaml
 from langchain_xai import ChatXAI
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import SystemMessage, AIMessage, ToolMessage
 from langchain_core.tools import tool
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import StateGraph, END
@@ -73,10 +73,13 @@ class RetrievingService:
             )
         )
 
+        tool_messages = [message for message in agent_response["messages"][2:] if isinstance(message, ToolMessage)]
+        result_messages = tool_messages + [agent_response["messages"][-1]]
+
         return ChatHistory(
             messages=[
                 message_to_message_dto(message)
-                for message in agent_response["messages"]
+                for message in result_messages
             ]
         )
 
@@ -99,7 +102,7 @@ class RetrievingService:
 
             logger.info(f"Retrieved {len(retrieved_documents)} documents.")
 
-            return {"messages": "\n\n\n".join([str(retrieved_document) for retrieved_document in retrieved_documents])}
+            return "\n\n\n".join([str(retrieved_document) for retrieved_document in retrieved_documents])
 
         return _rag_tool
 
