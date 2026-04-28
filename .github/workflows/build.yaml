@@ -32,8 +32,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create dummy .env
-        run: touch .env
+      - name: Create dummy .envs
+        run: touch ./MLRERAG-RAG/.env ./MLRERAG-backend/.env ./MLRERAG-frontend/.env
 
       - name: Build images
         run: docker compose -f docker-compose.services.yaml -f docker-compose.app.yaml build
