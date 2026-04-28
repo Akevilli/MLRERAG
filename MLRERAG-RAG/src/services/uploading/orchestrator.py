@@ -132,5 +132,5 @@ class PaperIngestionService:
         except:
             raise
         finally:
-            total_failed += set(upload_dto.id_list) - total_loaded
+            total_failed |= set(upload_dto.id_list) - total_loaded
             await self._paper_service.delete_papers(list(total_failed))

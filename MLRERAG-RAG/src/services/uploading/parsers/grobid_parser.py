@@ -5,6 +5,7 @@ from typing import List, Tuple, Dict
 from bs4 import BeautifulSoup, Tag
 from fastapi import HTTPException
 from httpx import AsyncClient
+from loguru import logger
 
 from .base_parser import Parser
 from src.shared.schemas import (
@@ -50,6 +51,11 @@ class GrobidParser(Parser):
         """
         tasks = [self._parse_single(metadata, paper_bytes) for metadata, paper_bytes in unloaded_papers]
         results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        exceptions = [exception for exception in results if isinstance(exception, Exception)]
+
+        for exception in exceptions:
+            logger.error(str(exception))
 
         valid_results = [result for result in results if isinstance(result, ArxivPaper)]
 
