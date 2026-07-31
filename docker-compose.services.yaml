@@ -14,8 +14,8 @@ services:
     networks:
       - MLRERAG_network
     volumes:
-      - ./data/postgres/init_roles.sh:/docker-entrypoint-initdb.d/init_roles.sh:ro
-      - postgres_data:/var/lib/postgresql/data
+      - ./init/postgres/init_roles.sh:/docker-entrypoint-initdb.d/init_roles.sh:ro
+      - postgres_data:/var/lib/postgresql
     
   redis:
     image: redis:8.4.0-alpine
@@ -41,10 +41,12 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
+    entrypoint: ["/usr/bin/bash", "/init.sh"]
     networks:
       - MLRERAG_network
     volumes:
       - ollama_volume:/root/.ollama
+      - ./init/ollama/init.sh:/init.sh
   
   qdrant:
     image: qdrant/qdrant:latest
@@ -55,22 +57,28 @@ services:
       - qdrant_data:/qdrant/storage
   
   neo4j:
-    image: neo4j:trixie
+    image: neo4j:latest
     container_name: neo4j-MLRERAG
     ports:
       - 7474:7474
       - 7687:7687
     environment:
       - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD}
-      - NEO4J_PLUGINS=["apoc", "apoc-extended"]
+      - NEO4J_PLUGINS=["apoc"]
       - NEO4J_dbms_security_procedures_unrestricted=apoc.*
       - NEO4J_dbms_security_procedures_allowlist=apoc.*
       - NEO4J_apoc_custom_procedures_enabled=true
     networks:
       - MLRERAG_network
     volumes:
-      - neo4j_data:/neo4j/data:/data
-      - neo4j_plugins:/neo4j/plugins:/plugins
+      - neo4j_data:/data
+      - neo4j_plugins:/plugins
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7474/ || exit 1"]
+      interval: 10s
+      timeout: 5s   
+      retries: 5     
+      start_period: 20s
 
 volumes:
   postgres_data:
