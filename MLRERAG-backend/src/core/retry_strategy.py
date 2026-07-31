@@ -4,7 +4,7 @@ from email_validator import EmailNotValidError
 
 
 def is_transient_error(exception: BaseException) -> bool:
-    if isinstance(exception, HTTPException) and exception.status_code == 404:
+    if isinstance(exception, HTTPException) and (exception.status_code == 404 or exception.status_code == 400):
         return False
 
     if isinstance(exception, EmailNotValidError):

@@ -2,7 +2,8 @@ import re
 from uuid import UUID
 from typing import Annotated
 
-from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
+from pydantic_core import PydanticCustomError
 
 from src.core import settings
 from src.services.auth import (
@@ -23,10 +24,17 @@ class CreateUserRequestSchema(BaseModel):
     password: Annotated[str, Field(
         min_length=6,
         max_length=64,
-        pattern=re.compile(r"^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&_;])[A-Za-z\d@$!%*#?&_;]{8,}$")
     )]
     confirm_password: str
 
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v) -> str:
+        if not re.match(re.compile(r"^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&_;])[A-Za-z\d@$!%*#?&_;]{8,}$"), v):
+            raise PydanticCustomError("invalid_password", "Password must contain numbers, common and special characters.")
+
+        return v
+    
     def to_dto(self) -> RegisterUserDTO:
         return RegisterUserDTO(**self.model_dump())
 
@@ -40,7 +48,6 @@ class ActivateUserRequestSchema(BaseModel):
 
     def to_dto(self) -> ActivateUserDTO:
         return ActivateUserDTO(**self.model_dump())
-
 
 class LoginUserRequestSchema(BaseModel):
     login: EmailStr | str

@@ -1,6 +1,7 @@
 import traceback
 
 from fastapi import FastAPI, HTTPException, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 from loguru import logger
@@ -105,7 +106,7 @@ class ErrorHandler:
             response = self._error_response(
                 request=request,
                 error_type='ValidationError',
-                message='Invalid input data',
+                message=exc.errors()[-1]["msg"],
                 http_status=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 details=exc.errors(),
             )
@@ -147,7 +148,6 @@ class ErrorHandler:
             Returns:
                 JSONResponse: JSON response describing the internal server error.
             """
-            # Generate traceback and log error
             traceback_str = ''.join(traceback.format_exception(type(exc), exc, exc.__traceback__))
             logger.error(f"Unhandled exception at {request.url.path}: {exc}\n{traceback_str}")
 
@@ -156,6 +156,31 @@ class ErrorHandler:
                 error_type=exc.__class__.__name__,
                 message='Internal server error occurred',
                 http_status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                details={'traceback': traceback_str.splitlines()[-5:]},
+            )
+
+            return response
+        
+        @app.exception_handler(RequestValidationError)
+        async def handle_request_validation_error_exception(request: Request, exc: RequestValidationError):
+            """
+            Handles request validation exceptions.
+
+            Args:
+                request: FastAPI request object.
+                exc: Raised Exception.
+
+            Returns:
+                JSONResponse: JSON response describing the internal server error.
+            """
+            traceback_str = ''.join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+            logger.error(f"Unhandled exception at {request.url.path}: {exc}\n{traceback_str}")
+
+            response = self._error_response(
+                request=request,
+                error_type="RequestValidationError",
+                message=exc.errors()[-1]["msg"],
+                http_status=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 details={'traceback': traceback_str.splitlines()[-5:]},
             )
 

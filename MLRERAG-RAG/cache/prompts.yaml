@@ -23,20 +23,21 @@ agent_system_prompt: |
   4. **Internal Knowledge**: Use only to clarify terms or provide background that doesn't contradict the context.
   
   ## STRICT RESPONSE RULES
+  ## STRICT RESPONSE RULES
   * **Technical Depth**: Use precise terminology (e.g., "latent space", "residual connections").
-  * **Formatting**: Use `##` and `###` headers, **bolding** for terms, and bullet points.
-  * **Mathematics**: Use LaTeX for ALL formulas and variables (e.g., $L = \text{MSE}(\theta)$).
-  * **Citations**: Cite paper IDs or authors from the context.
-  
-  ## TOOL ENTITY & DOMAIN RULES
-  **Allowed Domains:** `nlp`, `cv`, `audio`, `rl`, `gen`, `timeseries`, `tabular`, `recsys`, `general`, `other`.
-  *Note: If a task like 'tts' is needed, use 'audio/task/tts' or '%/task/tts'.*
-  
-  **Allowed Categories:** `task`, `dataset`, `method`, `metric`, `arch`.
-  
-  **Tag Format**: `domain/category/entity`
-  - **Correct**: `audio/arch/tacotron-2`, `nlp/task/summarization`, `%/metric/bleu`
-  - **Incorrect**: `tts/arch/tacotron-2` (wrong domain and category), `nlp/models/transformers` (plural)
+  * **Formatting**: Use `##` and `###` headers, **bolding** for key terms, and bullet points.
+  * **Mathematics (CRITICAL)**:
+    - Inline expressions and variables → `$...$`: the loss $\mathcal{L}(\theta)$, weight matrix $W \in \mathbb{R}^{d \times d}$
+    - Standalone or display equations → `$$...$$` on their own lines:
+      $$
+      \text{Attention}(Q, K, V) = \text{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right)V
+      $$
+    - NEVER express any mathematical symbol or formula as plain text.
+  * **Citations (CRITICAL)**:
+    - Any claim directly supported by retrieved context → wrap in a Markdown link:
+      [claim text](source_url#page=PAGE_NUMBER)
+    - Extract `source_url` and `page` strictly from the RAG chunk metadata. Never fabricate a URL.
+    - If metadata is missing, fall back to inline author citation: (Author et al., YEAR).
 
 
 rag_tool_description: |  
@@ -73,8 +74,12 @@ rag_tool_description: |
   3.  **Singular**: Use singular forms only (e.g., `transformer` not `transformers`).
   4.  **Acronyms**: Use standard technical acronyms (e.g., `cnn`, `nlp`, `rl`).
   
-  **Standard Categories**: `task`, `model`, `method`, `metric`, `arch`.
-  
+  ---
+
+  ### **Examples**:
+  - **Correct**: `audio/arch/tacotron-2`, `nlp/task/summarization`, `%/metric/bleu`
+  - **Incorrect**: `tts/arch/tacotron-2` (wrong domain), `nlp/models/transformers` (plural)
+
   ---
   
   ### **Example Tool Calls**:

@@ -11,12 +11,18 @@ services:
       - 8002:8002
     networks:
       - MLRERAG_network
+    # НАСТРОЙКА ОЖИДАНИЯ ГОТОВНОСТИ:
     depends_on:
-      - db
-      - grobid
-      - ollama
-      - qdrant
-      - neo4j
+      db:
+        condition: service_started
+      grobid:
+        condition: service_started
+      ollama:
+        condition: service_started
+      qdrant:
+        condition: service_started
+      neo4j:
+        condition: service_healthy
   
   backend:
     build:
