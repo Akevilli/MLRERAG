@@ -60,6 +60,7 @@ class PaperDomain(str, Enum):
     RECSYS = "recsys"
     GENERAL = "general"
     OTHER = "other"
+    WILDCARD = "%"
 
 
 class EntityCategory(str, Enum):
@@ -77,6 +78,7 @@ class EntityCategory(str, Enum):
     METHOD = "method"
     DATASET = "dataset"
     METRIC = "metric"
+    WILDCARD = "%"
 
 
 class PaperTag(BaseModel):

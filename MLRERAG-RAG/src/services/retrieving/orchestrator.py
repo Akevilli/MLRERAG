@@ -13,7 +13,7 @@ from .search_engine import SearchEngine
 from .schemas import AgentState
 from .lib import message_dto_to_message, message_to_message_dto
 from src.shared.embedders import Embedder
-from src.shared.schemas import ChatHistory
+from src.shared.schemas import ChatHistory, PaperTag
 
 
 class RetrievingService:
@@ -92,13 +92,13 @@ class RetrievingService:
     # tools
     def create_rag_tool(self):
         @tool(description=self._rag_tool_description)
-        async def _rag_tool(queries: List[str], tags: List[str]):
+        async def _rag_tool(queries: List[str], tags: List[PaperTag]):
             logger.info(
                 f"_rag_tool was executed with parameters; queries: {queries}, tags: {tags}"
             )
 
             embedded_queries = await self._embedder.embed_query(queries)
-            retrieved_documents = await self._search_engine.search(embedded_queries, tags)
+            retrieved_documents = await self._search_engine.search(embedded_queries, [str(tag) for tag in tags])
 
             logger.info(f"Retrieved {len(retrieved_documents)} documents.")
 
