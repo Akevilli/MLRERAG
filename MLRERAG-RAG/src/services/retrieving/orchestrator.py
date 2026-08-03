@@ -73,7 +73,7 @@ class RetrievingService:
             )
         )
 
-        tool_messages = [message for message in agent_response["messages"][2:] if isinstance(message, ToolMessage)]
+        tool_messages = [message for message in agent_response["messages"][2:] if isinstance(message, ToolMessage) and message.text]
         result_messages = tool_messages + [agent_response["messages"][-1]]
 
         return ChatHistory(

@@ -5,9 +5,17 @@ from uuid import UUID
 from pydantic import BaseModel, Field, field_serializer
 
 
+
+class PDFDTO(BaseModel):
+    name: str
+    content: bytes
+
 class PaperUploadDTO(BaseModel):
     """Data transfer object for paper upload requests."""
     id_list: List[str]
+
+class FileUploadDTO(BaseModel):
+    files: List[PDFDTO]
 
 
 class UploadedPaperDTO(BaseModel):
@@ -193,7 +201,7 @@ class ChunkedSection(SectionBase):
 
     def __str__(self) -> str:
         """Returns the string representation of the section."""
-        return "\n".join([chunk.content for chunk in self.chunks])
+        return "\n".join([chunk.text for chunk in self.chunks])
 
 class ChunkedArxivPaper(TaggedArxivPaper):
     """Model representing a parsed arxiv paper with chunked content."""

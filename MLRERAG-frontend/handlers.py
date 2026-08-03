@@ -100,3 +100,31 @@ def generate_response(prompt: str, chat_id: str | None) -> GeneratedResponse | N
         st.session_state["current_chat"] = chat
 
     return response.data
+
+
+def upload_pdf_handler():
+    """Хэндлер, вызываемый при сабмите формы в модальном окне."""
+    uploaded_files = st.session_state.get("pdf_uploader_input")
+    
+    if not uploaded_files:
+        st.warning("Please select at least one PDF file!")
+        return
+
+    # Читаем имена и содержимое файлов
+    files_data = [(file.name, file.read()) for file in uploaded_files]
+    
+    with st.spinner("Uploading and processing papers..."):
+        response = upload_pdf_files(files_data)
+        
+        if not response.is_success:
+            st.error(response.message)
+            return
+
+        data = response.data
+
+        st.success(f"Successfully processed {len(data.loaded)} paper(s)!")
+        
+        if data.failed:
+            st.warning(f"Failed to process {len(data.failed)} paper(s).")
+            
+        st.session_state["upload_success"] = True

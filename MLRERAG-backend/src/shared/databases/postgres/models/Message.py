@@ -17,5 +17,5 @@ class Message(Base):
         ForeignKey("chats.id", ondelete='CASCADE', onupdate='CASCADE'),
         nullable=False
     )
-    type: Mapped[Literal["assistant", "user"]] = mapped_column(nullable=False, default=True)
+    type: Mapped[Literal["assistant", "user", "tool"]] = mapped_column(nullable=False, default=True)
     chat: Mapped["Chat"] = relationship(back_populates="messages", init=False)

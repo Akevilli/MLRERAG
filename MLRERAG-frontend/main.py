@@ -1,6 +1,12 @@
 import streamlit as st
 
-from handlers import generate_response, get_user_chats, change_chat_handler, reset_current_chat
+from handlers import (
+    generate_response,
+    get_user_chats, 
+    change_chat_handler, 
+    reset_current_chat, 
+    upload_pdf_handler
+)
 from schemas import Chat, Message, PaginatedAPIResponse, PaginationMetadata, PaginationRequest
 
 if not "user" in st.session_state or not st.session_state["user"].refresh_token != "":
@@ -51,6 +57,25 @@ if "messages" not in st.session_state:
     )
 
 
+@st.dialog("Upload PDF Documents")
+def open_upload_dialog():
+    """Модальное окно с формой."""
+    st.write("Select PDF documents to parse and index into the system.")
+    
+    with st.form("pdf_upload_form", clear_on_submit=True):
+        st.file_uploader(
+            "Choose PDF files",
+            type=["pdf"],
+            accept_multiple_files=True,
+            key="pdf_uploader_input"
+        )
+        
+        submitted = st.form_submit_button(
+            "Upload & Process",
+            type="primary",
+            on_click=upload_pdf_handler 
+        )
+
 st.set_page_config(page_title="MLRERAG")
 st.title("MLRERAG")
 
@@ -61,6 +86,14 @@ with st.sidebar:
         "New Chat",
         use_container_width=True,
         on_click=reset_current_chat,
+        type="tertiary"
+    )
+
+    st.button(
+        "Upload PDFs", 
+        use_container_width=True,
+        on_click=open_upload_dialog, 
+        key="upload_pdf_btn",
         type="tertiary"
     )
 
@@ -85,8 +118,12 @@ with st.sidebar:
 
 for message in st.session_state["messages"].items:
     if message:
-        with st.chat_message(message.type):
-            st.markdown(message.text)
+        if message.type == "tool":
+            with st.expander("Retrieved documents"):
+                st.markdown(message.text)
+        else:
+            with st.chat_message(message.type):
+                st.markdown(message.text)
 
 
 if prompt := st.chat_input("Спросите что-нибудь..."):

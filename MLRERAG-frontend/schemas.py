@@ -11,12 +11,19 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
-    API_HOST: str
-    API_PORT: int
+    API_BACKEND_HOST: str
+    API_BACKEND_PORT: int
+    API_RAG_HOST: str
+    API_RAG_PORT: int
+
 
     @property
-    def API_URL(self) -> str:
-        return f"http://{self.API_HOST}:{self.API_PORT}"
+    def API_BACKEND_URL(self) -> str:
+        return f"http://{self.API_BACKEND_HOST}:{self.API_BACKEND_PORT}"
+
+    @property
+    def API_RAG_URL(self) -> str:
+        return f"http://{self.API_RAG_HOST}:{self.API_RAG_PORT}"
 
 
 class Chat(BaseModel):
@@ -61,12 +68,30 @@ class Response[T: Optional[BaseModel]](BaseModel):
     data: Optional[T]
 
     @classmethod
-    def success(cls, data: T, message: str = None) -> "Response":
+    def success(cls, data: T, message: str | None = None) -> "Response":
         return cls(data=data, message=message, is_success=True)
 
     @classmethod
     def fail(cls, message: str) -> "Response":
         return cls(data=None, message=message, is_success=False)
+
+
+class FileDTO(BaseModel):
+    """Модель одного файла для передачи через JSON (base64)."""
+    filename: str
+    content_base64: str
+
+
+class PDFPaperUploadDTO(BaseModel):
+    """DTO запроса на сервер."""
+    files: List[FileDTO]
+
+
+class PaperUploadResponse(BaseModel):
+    """DTO ответа от сервера (UploadedPaperDTO на бэкенде)."""
+    loaded: List[str]
+    failed: List[str]
+    cited: List[str]
 
 
 settings = Settings()

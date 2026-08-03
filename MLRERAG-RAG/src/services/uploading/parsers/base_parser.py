@@ -1,7 +1,7 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from abc import ABC, abstractmethod
 
-from src.shared.schemas import ArxivMetadata, ArxivPaper
+from src.shared.schemas import ArxivMetadata, ArxivPaper, FileUploadDTO
 
 
 class Parser(ABC):
@@ -12,7 +12,7 @@ class Parser(ABC):
     """
 
     @abstractmethod
-    async def parse(self, unloaded_papers: List[Tuple[ArxivMetadata, bytes]]) -> List[ArxivPaper]:
+    async def parse(self, unloaded_papers: List[Tuple[Optional[ArxivMetadata], bytes]]) -> List[ArxivPaper]:
         """Parses raw PDF content into structured paper objects.
 
         Args:
@@ -21,4 +21,8 @@ class Parser(ABC):
         Returns:
             List of ArxivPaper objects with extracted sections, tables, and references.
         """
+        pass
+
+    @abstractmethod
+    async def parse_files(self, files_dto: FileUploadDTO) -> List[ArxivPaper]:
         pass

@@ -1,6 +1,7 @@
 import asyncio
+import re
+from typing import Dict, List, Optional, Tuple
 from uuid import uuid4
-from typing import List, Tuple, Dict
 
 from bs4 import BeautifulSoup, Tag
 from fastapi import HTTPException
@@ -10,177 +11,172 @@ from loguru import logger
 from .base_parser import Parser
 from src.shared.schemas import (
     ArxivMetadata,
+    ArxivPaper,
+    FileUploadDTO,
     Paragraph,
+    PDFDTO,
+    Reference,
     Section,
     Table,
-    Reference,
-    ArxivPaper
 )
 
-# TODO: Merge sections without number with the first previous section with number.
 
-class GrobidParser(Parser):
-    """Parser implementation using GROBID service to extract structured data from PDF papers."""
+class GrobidClient:
+    """Отвечает только за сетевое взаимодействие с GROBID API."""
 
-    def __init__(
-            self,
-            httpx_client: AsyncClient,
-            grobid_host: str,
-            grobid_port: int,
-    ):
-        """
-        Initializes the GrobidParser.
+    def __init__(self, httpx_client: AsyncClient, host: str, port: int):
+        self._client = httpx_client
+        self._url = f"http://{host}:{port}/api/processFulltextDocument"
 
-        Args:
-            httpx_client: An asynchronous HTTP client for making requests.
-            grobid_host: Hostname of the GROBID service.
-            grobid_port: Port number of the GROBID service.
-        """
-        self._httpx_client = httpx_client
-        self._grobid_url = f"http://{grobid_host}:{grobid_port}/api/processFulltextDocument"
-
-    async def parse(self, unloaded_papers: List[Tuple[ArxivMetadata, bytes]]) -> List[ArxivPaper]:
-        """
-        Parses a list of raw PDF contents into structured ArxivPaper objects.
-
-        Args:
-            unloaded_papers: A list of tuples containing paper metadata and raw PDF bytes.
-
-        Returns:
-            List[ArxivPaper]: A list of objects containing structured sections, tables, and references.
-        """
-        tasks = [self._parse_single(metadata, paper_bytes) for metadata, paper_bytes in unloaded_papers]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        exceptions = [exception for exception in results if isinstance(exception, Exception)]
-
-        for exception in exceptions:
-            logger.error(str(exception))
-
-        valid_results = [result for result in results if isinstance(result, ArxivPaper)]
-
-        return valid_results
-
-    async def _parse_single(self, arxiv_metadata: ArxivMetadata, content: bytes) -> ArxivPaper:
-        """
-        Sends PDF content to GROBID API and retrieves the TEI XML response.
-
-        Args:
-            arxiv_metadata: Metadata of the paper being processed.
-            content: Raw PDF bytes.
-
-        Returns:
-            bytes: The XML response content from GROBID.
-
-        Raises:
-            HTTPException: If the GROBID service returns a non-200 status code.
-        """
-        files = {"input": (f"{arxiv_metadata.arxiv_id}.pdf", content, "application/pdf")}
-        data = {
-            "teiCoordinates": ["p", "head", "figure", "table", "biblStruct"]
-        }
+    async def process_pdf(self, pdf_bytes: bytes, filename: str = "document.pdf") -> bytes:
+        files = {"input": (filename, pdf_bytes, "application/pdf")}
+        data = {"teiCoordinates": ["p", "head", "figure", "table", "biblStruct"]}
 
         try:
-            response = await self._httpx_client.post(
-                self._grobid_url,
+            response = await self._client.post(
+                self._url,
                 files=files,
                 data=data,
-                timeout=60
+                timeout=60,
             )
             response.raise_for_status()
+            return response.content
         except Exception as e:
+            logger.error(f"Grobid request failed for {filename}: {e}")
             raise HTTPException(
                 status_code=500,
-                detail=f"Grobid request failed for {arxiv_metadata.arxiv_id}: {str(e)}"
+                detail=f"GROBID service error while processing {filename}: {str(e)}",
             )
 
-        soup = BeautifulSoup(response.content, "lxml-xml")
+
+class TeiXmlParser:
+    """Синхронный парсер TEI XML структуры в доменные Pydantic-модели."""
+
+    def parse(self, xml_content: bytes, metadata: Optional[ArxivMetadata] = None) -> ArxivPaper:
+        soup = BeautifulSoup(xml_content, "lxml-xml")
+
+        # Если внешние метаданные не переданы, извлекаем их из самого XML
+        if metadata is None:
+            metadata = self._extract_metadata(soup)
+
         tables = self._get_tables(soup)
         references = self._get_references(soup)
+        sections = self._get_sections(soup, tables, references)
 
-        paper = ArxivPaper(
-            sections=self._get_sections(soup, tables, references),
-            tables=[table for table in tables.values()],
-            references=[reference for reference in references.values()],
-            metadata=arxiv_metadata,
+        return ArxivPaper(
+            sections=sections,
+            tables=list(tables.values()),
+            references=list(references.values()),
+            metadata=metadata,
         )
 
-        return paper
+    def _extract_metadata(self, soup: BeautifulSoup) -> ArxivMetadata:
+        """Извлекает и формирует ArxivMetadata из XML, когда внешние данные отсутствуют."""
+        # 1. Извлекаем ID и версию из XML
+        arxiv_id, version = self.extract_arxiv_id_and_version(soup)
+        arxiv_id = arxiv_id or "unknown"
+        version = version or "1"  # Версия без буквы 'v'
+
+        # Заголовок
+        title_tag = soup.select_one("titleStmt > title")
+        title = title_tag.get_text(strip=True) if title_tag else "Untitled Paper"
+
+        # Аннотация (Summary)
+        abstract_tag = soup.select_one("profileDesc > abstract")
+        summary = abstract_tag.get_text(strip=True) if abstract_tag else ""
+
+        # Авторы
+        authors = []
+        for author_tag in soup.select("sourceDesc author"):
+            pers_name = author_tag.select_one("persName")
+            if pers_name:
+                authors.append(pers_name.get_text(separator=" ", strip=True))
+
+        return ArxivMetadata(
+            arxiv_id=arxiv_id,  # Теперь здесь строго "1231.1234"
+            version=version,    # Теперь здесь строго "2" (или "1")
+            title=title,
+            summary=summary,
+            source_url=f"https://arxiv.org/abs/{arxiv_id}" if arxiv_id != "unknown" else "",
+            authors=authors or ["Unknown"],
+        )
+
+    def extract_arxiv_id_and_version(self, soup: BeautifulSoup) -> Tuple[Optional[str], Optional[str]]:
+        """
+        Извлекает arxiv_id (без 'v') и версию (число без 'v').
+        Возвращает кортеж (arxiv_id, version).
+        """
+        arxiv_id_tag = soup.select_one("sourceDesc idno[type='arXiv']")
+        if not arxiv_id_tag:
+            return None, None
+
+        tag_text = arxiv_id_tag.get_text()
+        
+        # Регулярка делит ID на две группы:
+        # Group 1: сам ID (например, "1231.1234")
+        # Group 2: только цифра версии (например, "2" из "v2" или "V2")
+        match = re.search(r"(\d+\.\d+)(?:[vV](\d+))?", tag_text)
+        if not match:
+            return None, None
+
+        clean_id = match.group(1)
+        version_num = match.group(2) if match.group(2) else "1"
+
+        return clean_id, version_num
+
+    # Оставляем метод для обратной совместимости, если он вызывается где-то ещё
+    def extract_arxiv_id(self, soup: BeautifulSoup) -> Optional[str]:
+        clean_id, _ = self.extract_arxiv_id_and_version(soup)
+        return clean_id
 
     def _get_page(self, tag: Tag) -> str:
-        """
-        Extracts the page number from the 'coords' attribute of a TEI tag.
-
-        Args:
-            tag: A BeautifulSoup Tag object.
-
-        Returns:
-            str: The page number or "unknown" if coordinates are missing.
-        """
         coords = tag.get("coords")
         if not coords:
             return "unknown"
-
-        return coords.split(",")[0]
+        return str(coords).split(",")[0]
 
     def _get_paragraphs(
-            self,
-            section: Tag,
-            table_map: Dict[str, Table],
-            reference_map: Dict[str, Reference]
+        self,
+        section: Tag,
+        table_map: Dict[str, Table],
+        reference_map: Dict[str, Reference],
     ) -> List[Paragraph]:
-        """
-        Extracts all paragraphs from a given XML container.
-
-        Args:
-            section: The XML tag (like a <div>) containing <p> tags.
-            table_map: Dict with tables object with corresponding ids.
-            reference_map: Dict with references object with corresponding ids.
-
-        Returns:
-            List[Paragraph]: A list of Paragraph objects with text and page numbers.
-        """
         paragraphs = []
 
         for paragraph_tag in section.select("p"):
-            if text:=paragraph_tag.get_text():
-                table_ids = set()
-                reference_ids = set()
+            text = paragraph_tag.get_text()
+            if not text:
+                continue
 
-                for ref_tag in paragraph_tag.select("ref[type=\"table\"]"):
-                    if "target" in ref_tag.attrs:
-                        table_ids.add(ref_tag.attrs["target"][1:])
+            table_ids = {
+                ref.attrs["target"][1:]
+                for ref in paragraph_tag.select('ref[type="table"]')
+                if "target" in ref.attrs
+            }
 
-                for ref_tag in paragraph_tag.select("ref[type=\"bibr\"]"):
-                    if "target" in ref_tag.attrs:
-                        reference_ids.add(ref_tag.attrs["target"][1:])
+            reference_ids = {
+                ref.attrs["target"][1:]
+                for ref in paragraph_tag.select('ref[type="bibr"]')
+                if "target" in ref.attrs
+            }
 
-                paragraphs.append(
-                    Paragraph(
-                        text=text,
-                        page=self._get_page(paragraph_tag),
-                        tables=[table_map[id] for id in table_ids],
-                        references=[reference_map[id] for id in reference_ids if id in reference_map]
-                    )
+            paragraphs.append(
+                Paragraph(
+                    text=text,
+                    page=self._get_page(paragraph_tag),
+                    tables=[table_map[t_id] for t_id in table_ids if t_id in table_map],
+                    references=[reference_map[r_id] for r_id in reference_ids if r_id in reference_map],
                 )
+            )
 
         return paragraphs
 
     def _get_sections(
-            self,
-            soup: BeautifulSoup,
-            table_map: Dict[str, Table],
-            reference_map: Dict[str, Reference]
+        self,
+        soup: BeautifulSoup,
+        table_map: Dict[str, Table],
+        reference_map: Dict[str, Reference],
     ) -> List[Section]:
-        """
-        Extracts document sections (Introduction, Methods, etc.) from the TEI body.
-
-        Args:
-            soup: The parsed BeautifulSoup object.
-
-        Returns:
-            List[Section]: A list of structured Section objects.
-        """
         sections = []
 
         for div in soup.select("body > div"):
@@ -191,56 +187,39 @@ class GrobidParser(Parser):
             sections.append(
                 Section(
                     id=uuid4(),
-                    number=head.get("n", "—"),  # Use "—" if section number is missing
+                    number=str(head.get("n", "—")),
                     title=head.get_text(strip=True),
                     page=self._get_page(head),
-                    paragraphs=self._get_paragraphs(div, table_map, reference_map)
+                    paragraphs=self._get_paragraphs(div, table_map, reference_map),
                 )
             )
 
         return sections
 
     def _get_tables(self, soup: BeautifulSoup) -> Dict[str, Table]:
-        """
-        Extracts tables and converts them from TEI format to Markdown.
-
-        Args:
-            soup: The parsed BeautifulSoup object.
-
-        Returns:
-            Dict[str, Table]: A map containing table's ids and tables.
-        """
         tables = {}
 
         for table_fig in soup.select("body > figure[type='table']"):
-            head = table_fig.select_one("head")
-            desc = table_fig.select_one("figDesc")
+            table_id = table_fig.attrs.get("xml:id")
             xml_table = table_fig.select_one("table")
-            id = table_fig.attrs["xml:id"]
 
-            if not xml_table:
+            if not xml_table or not table_id:
                 continue
 
-            tables[id] = Table(
+            head = table_fig.select_one("head")
+            desc = table_fig.select_one("figDesc")
+
+            tables[table_id] = Table(
                 id=uuid4(),
                 caption=head.get_text(strip=True) if head else "Table",
                 text=self._tei_table_to_md(xml_table),
                 description=desc.get_text(strip=True) if desc else "",
-                page=self._get_page(table_fig)
+                page=self._get_page(table_fig),
             )
 
         return tables
 
     def _tei_table_to_md(self, table_tag: Tag) -> str:
-        """
-        Converts a TEI <table> structure into a Github-flavored Markdown table.
-
-        Args:
-            table_tag: The <table> Tag object.
-
-        Returns:
-            str: Markdown formatted table string.
-        """
         rows = table_tag.select("row")
         if not rows:
             return ""
@@ -256,22 +235,73 @@ class GrobidParser(Parser):
         return "\n".join(md_lines)
 
     def _get_references(self, soup: BeautifulSoup) -> Dict[str, Reference]:
-        """
-        Extracts bibliography references, specifically focusing on Arxiv links.
-
-        Args:
-            soup: The parsed BeautifulSoup object.
-
-        Returns:
-            List[Reference]: A list of Reference objects containing URLs.
-        """
         references = {}
 
-        for biblStruct_tag in soup.select("listBibl biblStruct"):
-            tag_id = biblStruct_tag.attrs["xml:id"]
+        for bibl_struct in soup.select("listBibl biblStruct"):
+            tag_id = bibl_struct.attrs.get("xml:id")
+            if not tag_id:
+                continue
 
-            if idno_tag:=biblStruct_tag.select_one("idno[type=\"arXiv\"]"):
-                if text:=idno_tag.get_text(strip=True):
-                    references[tag_id] = Reference(arxiv_id=text.split(":")[1])
+            idno_tag = bibl_struct.select_one('idno[type="arXiv"]')
+            if idno_tag and (text := idno_tag.get_text(strip=True)):
+                arxiv_id = text.split(":")[-1]
+                references[tag_id] = Reference(arxiv_id=arxiv_id)
 
         return references
+
+
+class GrobidParser(Parser):
+    """Главный сервис-оркестратор парсинга PDF."""
+
+    def __init__(
+        self,
+        httpx_client: AsyncClient,
+        grobid_host: str,
+        grobid_port: int,
+        xml_parser: Optional[TeiXmlParser] = None,
+    ):
+        self._grobid_client = GrobidClient(httpx_client, grobid_host, grobid_port)
+        self._xml_parser = xml_parser or TeiXmlParser()
+
+    async def parse(
+        self,
+        unloaded_papers: List[Tuple[Optional[ArxivMetadata], bytes]],
+    ) -> List[ArxivPaper]:
+        """
+        Основной метод парсинга. Принимает список кортежей (метаданные или None, байты PDF).
+        """
+        tasks = [
+            self._parse_single(metadata, paper_bytes)
+            for metadata, paper_bytes in unloaded_papers
+        ]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        valid_results = []
+        for result in results:
+            if isinstance(result, Exception):
+                logger.error(f"Error parsing paper: {str(result)}")
+            elif isinstance(result, ArxivPaper):
+                valid_results.append(result)
+
+        return valid_results
+
+    async def parse_files(self, files_dto: FileUploadDTO) -> List[ArxivPaper]:
+        """
+        Метод для распарсивания загруженных PDF-файлов без предварительных метаданных arXiv.
+        """
+        papers_payload = [(None, file_item.content) for file_item in files_dto.files]
+        return await self.parse(papers_payload)
+
+    async def _parse_single(
+        self,
+        metadata: Optional[ArxivMetadata],
+        content: bytes,
+    ) -> ArxivPaper:
+        filename = f"{metadata.arxiv_id}.pdf" if metadata else "document.pdf"
+        
+        # 1. Отправляем в GROBID
+        xml_bytes = await self._grobid_client.process_pdf(content, filename=filename)
+
+        # 2. Преобразуем TEI XML в ArxivPaper
+        paper = self._xml_parser.parse(xml_bytes, metadata=metadata)
+        return paper

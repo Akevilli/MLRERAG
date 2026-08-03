@@ -1,4 +1,6 @@
+import base64
 from datetime import datetime, timezone
+from typing import Tuple
 
 import requests
 import streamlit as st
@@ -14,7 +16,7 @@ def check_jwt():
     if (payload["exp"] - 20 < datetime.now(timezone.utc).timestamp() and
         st.session_state["user"].refresh_token):
         response = requests.post(
-            f"{settings.API_URL}/api/auth/refresh",
+            f"{settings.API_BACKEND_URL}/api/auth/refresh",
             json={
                 "user_id": st.session_state["user"].id,
                 "refresh_token": st.session_state["user"].refresh_token
@@ -36,7 +38,7 @@ session = requests.Session()
 
 def login(login_str: str, password: str) -> Response[User]:
     response = requests.post(
-        f"{settings.API_URL}/api/auth/login",
+        f"{settings.API_BACKEND_URL}/api/auth/login",
         json={
             "login": login_str,
             "password": password,
@@ -62,7 +64,7 @@ def registration(
     confirm_password: str,
 ) -> Response[None]:
     response = requests.post(
-        f"{settings.API_URL}/api/auth/register",
+        f"{settings.API_BACKEND_URL}/api/auth/register",
         json={
             "username": username,
             "email": email,
@@ -82,7 +84,7 @@ def registration(
 
 def activation(login_str: str, token: str) -> Response[None]:
     response = requests.post(
-        f"{settings.API_URL}/api/auth/activate",
+        f"{settings.API_BACKEND_URL}/api/auth/activate",
         json={
             "login": login_str,
             "activation_token": token,
@@ -101,7 +103,7 @@ def activation(login_str: str, token: str) -> Response[None]:
 def get_chat_by_id(chat_id: str) -> Response[Chat]:
     check_jwt()
     response = session.get(
-        f"{settings.API_URL}/api/chats/{chat_id}",
+        f"{settings.API_BACKEND_URL}/api/chats/{chat_id}",
         headers={
             "Authorization": f"Bearer {st.session_state['user'].access_token}",
         }
@@ -119,7 +121,7 @@ def get_chat_by_id(chat_id: str) -> Response[Chat]:
 def get_messages(chat_id: str, request: PaginationRequest) -> Response[PaginatedAPIResponse[Message]]:
     check_jwt()
     response = session.get(
-        f"{settings.API_URL}/api/chats/{chat_id}/messages",
+        f"{settings.API_BACKEND_URL}/api/chats/{chat_id}/messages",
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {st.session_state['user'].access_token}"
@@ -141,7 +143,7 @@ def get_messages(chat_id: str, request: PaginationRequest) -> Response[Paginated
 def get_users_chats(request: PaginationRequest) -> Response[PaginatedAPIResponse[Chat]]:
     check_jwt()
     response = session.get(
-        f"{settings.API_URL}/api/chats/me",
+        f"{settings.API_BACKEND_URL}/api/chats/me",
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {st.session_state['user'].access_token}",
@@ -163,7 +165,7 @@ def get_users_chats(request: PaginationRequest) -> Response[PaginatedAPIResponse
 def generate_answer(prompt: str, chat_id: str | None) -> Response[GeneratedResponse]:
     check_jwt()
     response = session.put(
-        f"{settings.API_URL}/api/rag",
+        f"{settings.API_BACKEND_URL}/api/rag",
         json={
             "query": prompt,
             "chat_id": chat_id,
@@ -181,3 +183,31 @@ def generate_answer(prompt: str, chat_id: str | None) -> Response[GeneratedRespo
         return Response.fail(message=message if message else "Unexpected error!")
 
     return Response.success(GeneratedResponse.model_validate(response_data))
+
+
+def upload_pdf_files(files: List[Tuple[str, bytes]]) -> Response[PaperUploadResponse]:
+    """Отправляет файлы на сервер через POST /api/upload/pdf с JWT токеном."""
+    check_jwt()
+    
+    files_payload = [
+        ("files", (name, content, "application/pdf"))
+        for name, content in files
+    ]
+    
+    headers = {
+        "Authorization": f"Bearer {st.session_state['user'].access_token}"
+    }
+    
+    response = session.post(
+        f"{settings.API_RAG_URL}/rag/upload/pdf",
+        files=files_payload,
+        headers=headers
+    )
+    
+    response_data = response.json()
+    
+    if response.status_code != 201:
+        message = response_data.get("error", {}).get("message")
+        return Response.fail(message=message if message else "Failed to upload files!")
+        
+    return Response.success(PaperUploadResponse.model_validate(response_data))

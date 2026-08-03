@@ -2,7 +2,7 @@ from datetime import datetime
 
 from loguru import logger
 
-from src.shared import PaperUploadDTO, UploadedPaperDTO, Embedder, QdrantRepository, get_batch, Neo4jRepository
+from src.shared import FileUploadDTO, PaperUploadDTO, UploadedPaperDTO, Embedder, QdrantRepository, get_batch, Neo4jRepository
 from .papers import PaperService
 from .providers import Provider
 from .parsers import Parser
@@ -134,3 +134,81 @@ class PaperIngestionService:
         finally:
             total_failed |= set(upload_dto.id_list) - total_loaded
             await self._paper_service.delete_papers(list(total_failed))
+
+    async def process_files(self, upload_dto: FileUploadDTO) -> UploadedPaperDTO:
+        total_loaded: set[str] = set()
+        total_failed: set[str] = set()
+        total_cited: set[str] = set()
+
+        try:
+            logger.debug(f"Processing {len(upload_dto.files)} user-uploaded file(s) in batches of {self._batch_size}.")
+
+            async for batch_files in get_batch(upload_dto.files, self._batch_size):
+                if not batch_files:
+                    continue
+
+                parsing_start = datetime.now()
+                arxiv_papers = await self._parser.parse_files(FileUploadDTO(files=batch_files))
+                parsing_end = datetime.now()
+                
+                logger.debug(
+                    f"Batch of {len(arxiv_papers)} paper(s) parsed. "
+                    f"Time: {(parsing_end - parsing_start).total_seconds()}s."
+                )
+
+                if not arxiv_papers:
+                    continue
+
+                extracted_metadata = [paper.metadata for paper in arxiv_papers]
+                unloaded_metadata = await self._paper_service.register_papers(extracted_metadata)
+
+                unloaded_ids = {m.arxiv_id for m in unloaded_metadata}
+                valid_papers = [p for p in arxiv_papers if p.metadata.arxiv_id in unloaded_ids]
+
+                if not valid_papers:
+                    continue
+
+                tagging_start = datetime.now()
+                tagged_papers = await self._tagger.tag(valid_papers)
+                tagging_end = datetime.now()
+                logger.debug(f"Tagged in {(tagging_end - tagging_start).total_seconds()}s.")
+
+                chunked_papers = self._chunker.chunk(tagged_papers)
+
+                embedding_start = datetime.now()
+                embedded_papers = await self._embedder.embed_document(chunked_papers)
+                embedding_end = datetime.now()
+                logger.debug(f"Embedded in {(embedding_end - embedding_start).total_seconds()}s.")
+
+                referenced_ids = [
+                    ref.arxiv_id 
+                    for paper in embedded_papers 
+                    for ref in paper.references
+                ]
+                cited_papers_metadata = (
+                    await self._arxiv_provider.get_metadata(referenced_ids) 
+                    if referenced_ids else []
+                )
+
+                await self._qdrant_repository.upload_chunks(embedded_papers)
+                await self._neo4j_repository.upload_papers(chunked_papers, cited_papers_metadata)
+                await self._paper_service.mark_as_loaded([paper.metadata for paper in embedded_papers])
+
+                loaded = {paper.metadata.arxiv_id for paper in embedded_papers}
+                total_loaded.update(loaded)
+
+                all_batch_ids = {p.metadata.arxiv_id for p in arxiv_papers}
+                total_failed.update(all_batch_ids - loaded)
+
+                cited = {ref.arxiv_id for paper in embedded_papers for ref in paper.references}
+                total_cited.update(cited)
+
+            return UploadedPaperDTO(
+                loaded=total_loaded,
+                failed=total_failed,
+                cited=total_cited,
+            )
+
+        except Exception as e:
+            logger.error(f"Error during processing user uploaded files batch: {e}")
+            raise

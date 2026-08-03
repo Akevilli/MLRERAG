@@ -28,6 +28,8 @@ services:
   grobid:
     image: grobid/grobid:0.9.0-crf
     container_name: grobid-MLRERAG
+    ports:
+      - "7043:8070"
     networks:
       - MLRERAG_network
   

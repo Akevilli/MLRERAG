@@ -1,7 +1,11 @@
-from fastapi import APIRouter, Depends, status
+from typing import List
+
+from fastapi import APIRouter, Depends, status, File, UploadFile
 
 from src.dependencies import get_uploading_orchestrator, get_retrieving_orchestrator
 from ..schemas import (
+    PDFDTO,
+    FileUploadDTO,
     PaperUploadRequest,
     PaperUploadResponse,
     GenerateAnswerRequest,
@@ -20,11 +24,30 @@ router = APIRouter()
 )
 async def upload(
     upload_data: PaperUploadRequest,
-    _rag_service: PaperIngestionService = Depends(get_uploading_orchestrator),
+    rag_service: PaperIngestionService = Depends(get_uploading_orchestrator),
 ):
-    response = await _rag_service.process(upload_data.to_dto())
+    response = await rag_service.process(upload_data.to_dto())
 
     return response
+
+@router.post(
+    "/upload/pdf",
+    status_code=status.HTTP_201_CREATED,
+    response_model=PaperUploadResponse
+)
+async def upload_files(
+    files: List[UploadFile] = File(...),
+    rag_service: PaperIngestionService = Depends(get_uploading_orchestrator)
+):
+    pdf_dtos = []
+    for file in files:
+        content = await file.read()
+        pdf_dtos.append(PDFDTO(name=file.filename, content=content))
+    
+    file_upload_dto = FileUploadDTO(files=pdf_dtos)
+    response = await rag_service.process_files(file_upload_dto)
+    return response
+
 
 
 @router.post(

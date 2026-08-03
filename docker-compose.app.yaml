@@ -3,7 +3,6 @@ services:
   rag:
     build:
       context: ./MLRERAG-RAG
-    image: ghcr.io/akevilli/mlrerag-rag:latest
     container_name: RAG-MLRERAG
     env_file:
       - ./MLRERAG-RAG/.env
@@ -11,7 +10,6 @@ services:
       - 8002:8002
     networks:
       - MLRERAG_network
-    # НАСТРОЙКА ОЖИДАНИЯ ГОТОВНОСТИ:
     depends_on:
       db:
         condition: service_started
@@ -27,7 +25,6 @@ services:
   backend:
     build:
       context: ./MLRERAG-backend
-    image: ghcr.io/akevilli/mlrerag-backend:latest
     container_name: backend-MLRERAG
     env_file:
       - ./MLRERAG-backend/.env
@@ -42,7 +39,6 @@ services:
   frontend:
     build:
       context: ./MLRERAG-frontend
-    image: ghcr.io/akevilli/mlrerag-frontend:latest
     container_name: frontend-MLRERAG
     env_file:
       - ./MLRERAG-frontend/.env

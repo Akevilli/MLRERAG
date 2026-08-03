@@ -57,6 +57,9 @@ class RAGService:
                     pagination_request,
                     user_credentials,
                 )).items
+
+                messages = [message for message in messages if message.type != "tool"]
+
                 await self._redis_service.append_messages(current_chat.id, messages)
 
         user_message = BaseMessageDTO(text=request.query, type="user", chat_id=current_chat.id)
@@ -75,15 +78,21 @@ class RAGService:
         result = RAGResponseDTO.model_validate(response.json())
         logger.info(f"RAG response: {result}")
 
-        model_message = await self._message_service.create(
-            CreateMessageDTO(
-                text=result.messages[-1].text,
-                chat_id=current_chat.id,
-                type="assistant"
-            )
-        )
+        messages = []
 
-        await self._redis_service.append_messages(current_chat.id, [user_message, model_message])
+        for message_json in result.messages:
+            message = await self._message_service.create(
+                CreateMessageDTO(
+                    text=message_json.text,
+                    chat_id=current_chat.id,
+                    type=message_json.type
+                )
+            )
+
+            if message.type != "tool":
+                messages.append(message)
+
+        await self._redis_service.append_messages(current_chat.id, [user_message, *messages])
 
         return RAGRServiceResponseDTO(
             messages=result.messages,
